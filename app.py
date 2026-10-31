@@ -166,23 +166,40 @@ def build_ai_prompt(m_data, m_id):
     return prompt
 
 def get_hero_matchups(hero_id):
-    if not STRATZ_API_TOKEN: return None
-    url = "https://api.stratz.com/graphql"
-    headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-    q = "query GetHeroMatchups($heroId: Short!) { heroStats { heroVsHeroMatchup(heroId: $heroId) { advantage { vs { heroId2 winCount matchCount } } } } }"
+    # 1. Пытаемся через STRATZ
+    if STRATZ_API_TOKEN:
+        url = "https://api.stratz.com/graphql"
+        headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
+        q = "query GetHeroMatchups($heroId: Short!) { heroStats { heroVsHeroMatchup(heroId: $heroId) { advantage { vs { heroId2 winCount matchCount } } } } }"
+        try:
+            r = requests.post(url, headers=headers, json={"query": q, "variables": {"heroId": int(hero_id)}}, timeout=10, verify=False)
+            if r.status_code == 200:
+                data = r.json()
+                if "errors" not in data:
+                    adv = data.get("data", {}).get("heroStats", {}).get("heroVsHeroMatchup", {}).get("advantage", [])
+                    adapted = []
+                    for a in adv:
+                        for vs in a.get("vs", []):
+                            if vs.get("heroId2") and vs.get("matchCount", 0) > 0:
+                                adapted.append({"hero_id": vs["heroId2"], "win_rate": (vs["winCount"] / vs["matchCount"]) * 100})
+                    if adapted:
+                        return adapted
+        except: pass
+
+    # 2. Если STRATZ упал — идем в OpenDota
     try:
-        r = requests.post(url, headers=headers, json={"query": q, "variables": {"heroId": int(hero_id)}}, timeout=20, verify=False)
+        r = requests.get(f"https://api.opendota.com/api/heroes/{hero_id}/matchups", timeout=10)
         if r.status_code == 200:
             data = r.json()
-            if "errors" not in data:
-                adv = data.get("data", {}).get("heroStats", {}).get("heroVsHeroMatchup", {}).get("advantage", [])
-                adapted = []
-                for a in adv:
-                    for vs in a.get("vs", []):
-                        if vs.get("heroId2") and vs.get("matchCount", 0) > 0:
-                            adapted.append({"hero_id": vs["heroId2"], "win_rate": (vs["winCount"] / vs["matchCount"]) * 100})
-                return adapted
+            adapted = []
+            # У OpenDota приходит массив: games_played, wins
+            for item in data:
+                if item.get("games_played", 0) > 10: # Берем только тех, с кем играли больше 10 раз
+                    win_rate = (item["wins"] / item["games_played"]) * 100
+                    adapted.append({"hero_id": item["hero_id"], "win_rate": win_rate})
+            return adapted
     except: pass
+    
     return None
 
 def get_hero_info(hero_id):

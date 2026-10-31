@@ -1066,19 +1066,33 @@ def wheel():
     row = cursor.fetchone()
     is_premium = row and row[0] == 1
     
+    # --- НАЧАЛО ВСТАВКИ (Проверка 24 часов) ---
     result = None
-    win_index = 0 
-    
-    if request.method == 'POST' and is_premium:
+    win_index = 0
+    can_spin = True
+
+    if is_premium:
+        cursor.execute("SELECT last_spin FROM user_spins WHERE steam_id = ?", (session['steam_id'],))
+        last_spin_row = cursor.fetchone()
+        if last_spin_row:
+            # Парсим время из базы (SQLite хранит его как строку)
+            last_spin_time = datetime.datetime.strptime(last_spin_row[0], "%Y-%m-%d %H:%M:%S")
+            # Если с последней прокрутки прошло меньше 24 часов (86400 секунд)
+            if (datetime.datetime.now() - last_spin_time).total_seconds() < 86400:
+                can_spin = False
+                result = "Вы уже крутили колесо сегодня. Следующая попытка будет доступна через 24 часа!"
+    # --- КОНЕЦ ВСТАВКИ ---
+
+    if request.method == 'POST' and is_premium and can_spin: # <-- Добавляем 'and can_spin' сюда
         rand = random.uniform(0, 100)
         
         if rand < 0.00001:
             result = "Аркана на любого героя! (Поздравляем, ты выиграл джекпот! Свяжись с админом)"
             win_index = 4
-        elif rand < 0.06:
+        elif rand < 0.07:
             result = "Inscribed Lamb для Slark! (Напиши админу для получения)"
             win_index = 3
-        elif rand < 0.56:
+        elif rand < 0.55:
             result = "Скин в Доте до 200 рублей!"
             win_index = 2
         elif rand < 20.56:

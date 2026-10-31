@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Таблица лидеров</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; --border: #334155; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: var(--card-bg); padding: 40px; border-radius: 16px; width: 100%; max-width: 800px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
+        h1 { text-align: center; color: var(--gold); margin-top: 0; }
+        
+        .leader-row { display: flex; align-items: center; gap: 20px; padding: 15px; border-bottom: 1px solid var(--border); transition: 0.3s; }
+        .leader-row:hover { background: rgba(255,255,255,0.05); }
+        
+        .rank { font-weight: 900; color: var(--secondary); font-size: 24px; width: 40px; text-align: center; }
+        .top-1 .rank { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
+        .top-2 .rank { color: #e2e8f0; }
+        .top-3 .rank { color: #d97706; }
+        
+        .avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; }
+        .name { flex-grow: 1; font-weight: bold; font-size: 18px; }
+        .points { color: #22c55e; font-weight: bold; font-size: 24px; text-shadow: 0 0 10px rgba(34, 197, 94, 0.3); }
+        
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 Зал славы Фэнтези</h1>
+        <p style="text-align: center; color: var(--secondary); margin-bottom: 30px;">Лучшие предсказатели текущего турнира</p>
+        
+        {% for user in leaderboard %}
+        <div class="leader-row {% if loop.index == 1 %}top-1{% elif loop.index == 2 %}top-2{% elif loop.index == 3 %}top-3{% endif %}">
+            <div class="rank">#{{ loop.index }}</div>
+            <img src="{{ user.avatar }}" class="avatar" onerror="this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+            <div class="name">{{ user.name }}</div>
+            <div class="points">{{ user.points }}</div>
+        </div>
+        {% else %}
+        <p style="text-align: center; color: var(--secondary);">Пока никто не собрал состав. Будь первым!</p>
+        {% endfor %}
+        
+        <a href="/fantasy" class="nav-link">← Вернуться к своему составу</a>
+    </div>
+</body>
+</html>

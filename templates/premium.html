@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Премиум-подписка</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; --border: #334155; --accent-glow: rgba(225, 29, 72, 0.5); }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: var(--card-bg); padding: 40px; border-radius: 16px; width: 100%; max-width: 800px; border: 1px solid var(--border); text-align: center; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: var(--gold); margin-top: 0; font-size: 36px; text-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
+        .price { font-size: 48px; font-weight: bold; color: var(--accent); margin: 20px 0; text-shadow: 0 0 20px var(--accent-glow); }
+        .price span { font-size: 20px; color: var(--secondary); font-weight: normal; text-shadow: none; }
+        
+        .features { text-align: left; margin: 30px 0; background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .feature-item { display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid var(--border); font-size: 16px; }
+        .feature-item:last-child { border-bottom: none; }
+        .feature-icon { font-size: 28px; }
+        .feature-text strong { display: block; color: var(--gold); font-size: 18px; margin-bottom: 4px; }
+        .feature-text span { color: var(--secondary); font-size: 14px; }
+        
+        .btn-buy { 
+            display: inline-block; background: var(--accent); color: white; 
+            padding: 18px 40px; border-radius: 8px; text-decoration: none; 
+            font-weight: bold; font-size: 20px; transition: 0.3s; 
+            box-shadow: 0 4px 15px var(--accent-glow); margin-top: 10px;
+        }
+        .btn-buy:hover { background: #be123c; transform: scale(1.05); box-shadow: 0 0 25px var(--accent); }
+        
+        .premium-active { 
+            background: rgba(34, 197, 94, 0.1); border: 2px solid #22c55e; color: #22c55e; 
+            padding: 20px; border-radius: 12px; font-size: 20px; font-weight: bold; margin-top: 20px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; font-weight: bold; transition: 0.3s; }
+        .nav-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👑 Премиум-подписка</h1>
+        <p style="color: var(--secondary); font-size: 18px;">Поддержи проект и получи эксклюзивные возможности</p>
+        
+        <div class="price">99 ₽ <span>/ месяц</span></div>
+
+        <div class="features">
+            <div class="feature-item">
+                <span class="feature-icon">🧠</span>
+                <div class="feature-text">
+                    <strong>Безлимитный ИИ-Тренер</strong>
+                    <span>Обычные пользователи: 5 запросов в день. Премиум: без ограничений.</span>
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">🏅</span>
+                <div class="feature-text">
+                    <strong>Эксклюзивная ачивка «Золотой инвестор»</strong>
+                    <span>Золотая рамка в профиле и особый статус.</span>
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">⚡</span>
+                <div class="feature-text">
+                    <strong>Приоритет в очереди</strong>
+                    <span>Твои запросы к ИИ обрабатываются первыми.</span>
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">🎰</span>
+                <div class="feature-text">
+                    <strong>Доступ к Колесу Фортуны</strong>
+                    <span>Крути рулетку и выигрывай скины, арканы и другие призы!</span>
+                </div>
+            </div>
+        </div>
+
+        {% if is_premium %}
+            <div class="premium-active">
+                <span>✅</span> У тебя уже есть Премиум! Спасибо за поддержку!
+            </div>
+        {% else %}
+            <a href="https://www.donationalerts.com/r/asod888" target="_blank" class="btn-buy">Поддержать на 99 ₽</a>
+            <p style="color: var(--secondary); font-size: 12px; margin-top: 15px;">После оплаты напишите в Telegram @shisuyagod для активации.</p>
+        {% endif %}
+
+        <a href="/" class="nav-link">← Вернуться на главную</a>
+    </div>
+</body>
+</html>

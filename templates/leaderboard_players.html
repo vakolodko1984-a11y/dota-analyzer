@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Топ игроков</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --gold: #fbbf24; --text: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: var(--card-bg); padding: 40px; border-radius: 16px; width: 100%; max-width: 600px; border: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { text-align: center; color: var(--gold); }
+        .player-row { display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid #334155; }
+        .rank { font-weight: bold; color: #64748b; width: 30px; font-size: 20px; }
+        .player-info { flex-grow: 1; }
+        .player-name { font-weight: bold; font-size: 18px; }
+        .hero-name { font-size: 14px; color: #94a3b8; }
+        .hero-icon { width: 60px; height: 34px; border-radius: 4px; object-fit: cover; }
+        .gpm { font-weight: bold; color: #22c55e; font-size: 20px; }
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: #94a3b8; text-decoration: none; font-weight: bold; }
+        .nav-link:hover { color: var(--gold); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🥇 Топ игроков по GPM</h1>
+        {% for p in top_players %}
+        <div class="player-row">
+            <div class="rank">#{{ loop.index }}</div>
+            <img src="https://cdn.cloudflare.steamstatic.com{{ p.icon }}" class="hero-icon">
+            <div class="player-info">
+                <div class="player-name">{{ p.name }}</div>
+                <div class="hero-name">Играет на {{ p.hero }}</div>
+            </div>
+            <div class="gpm">{{ p.gpm }}</div>
+        </div>
+        {% endfor %}
+        <a href="/" class="nav-link">← Вернуться на главную</a>
+    </div>
+</body>
+</html>

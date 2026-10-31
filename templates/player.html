@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль игрока</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; }
+        body { font-family: 'Segoe UI', sans-serif; color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; background: var(--bg); position: relative; }
+        body::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 50% 50%, rgba(225, 29, 72, 0.1), transparent 60%); z-index: -1; }
+        
+        .container { background: var(--card-bg); padding: 40px; border-radius: 16px; width: 100%; max-width: 800px; border: 1px solid #334155; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; z-index: 1; }
+        
+        .profile-header { display: flex; align-items: center; gap: 20px; border-bottom: 1px solid #334155; padding-bottom: 20px; margin-bottom: 20px; }
+        
+        .avatar { 
+            width: 80px; 
+            height: 80px; 
+            border-radius: 50%; 
+            border: 3px solid var(--accent); 
+            object-fit: cover; 
+            object-position: top; 
+            background: #1e293b; 
+        }
+        
+        .info h1 { margin: 0; color: var(--text); }
+        .info p { margin: 5px 0; color: var(--secondary); }
+        .winrate { color: #22c55e; font-weight: bold; }
+        .rank { color: #fbbf24; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(251,191,36,0.3);}
+
+        .matches-list { display: flex; flex-direction: column; gap: 10px; }
+        .match-card { display: flex; align-items: center; gap: 15px; background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); transition: 0.3s; }
+        .match-card:hover { background: rgba(15, 23, 42, 0.9); }
+        .match-id { font-weight: bold; color: var(--secondary); font-size: 14px; width: 100px; }
+        .heroes-row { display: flex; gap: 5px; flex: 1; }
+        .hero-icon { width: 60px; height: 34px; border-radius: 4px; object-fit: cover; border: 1px solid #334155; }
+        .match-duration { color: var(--secondary); font-size: 14px; }
+
+        .no-matches-box {
+            text-align: center; padding: 30px; background: rgba(15, 23, 42, 0.6); 
+            border-radius: 8px; border: 1px dashed #334155;
+        }
+        .no-matches-box p { color: var(--secondary); margin: 0; }
+        .dotabuff-link {
+            display: inline-block; margin-top: 15px; padding: 10px 20px;
+            background: var(--accent); color: white; text-decoration: none; 
+            border-radius: 8px; font-weight: bold; transition: 0.3s;
+        }
+        .dotabuff-link:hover { background: #be123c; box-shadow: 0 0 15px rgba(225, 29, 72, 0.4); }
+
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; font-weight: bold; transition: 0.3s; padding: 10px; border: 1px solid #334155; border-radius: 8px; }
+        .nav-link:hover { color: #fff; background: rgba(225, 29, 72, 0.2); border-color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="profile-header">
+            <img src="{{ avatar if avatar else 'https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png' }}" 
+                 class="avatar" 
+                 onerror="this.onerror=null;this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png'; this.style.padding='10px';">
+            <div class="info">
+                <h1>{{ name }}</h1>
+                
+                {% if leaderboard_rank %}
+                    <p class="rank">🏆 Ранг в ладдере: #{{ leaderboard_rank }}</p>
+                {% endif %}
+                
+                <p>Всего матчей: {{ total_matches }}</p>
+                <p>Винрейт: <span class="winrate">{{ winrate }}%</span></p>
+                <p style="font-size: 12px; margin-top: 10px;">Steam ID: {{ steam_id }}</p>
+            </div>
+        </div>
+
+        <h3 style="color: var(--accent);">Последние матчи:</h3>
+        {% if matches %}
+            <div class="matches-list">
+                {% for m in matches %}
+                <div class="match-card">
+                    <div class="match-id">#{{ m.id }}</div>
+                    <div class="heroes-row">
+                        {% for h in m.heroes %}
+                        <img src="https://cdn.cloudflare.steamstatic.com{{ h.icon }}" title="{{ h.name }}" class="hero-icon">
+                        {% endfor %}
+                    </div>
+                    <div class="match-duration">{{ m.duration }} мин</div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-matches-box">
+                <p>STRATZ скрывает историю матчей для про-игроков (защита приватности).</p>
+                <a href="https://www.dotabuff.com/players/{{ steam_id }}" target="_blank" class="dotabuff-link">
+                    Посмотреть статистику на Dotabuff →
+                </a>
+            </div>
+        {% endif %}
+
+        <a href="/pros" class="nav-link">← Вернуться к про-игрокам</a>
+    </div>
+</body>
+</html>

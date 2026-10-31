@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Draft Helper</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid #334155; }
+        h1 { text-align: center; color: var(--accent); }
+        
+        /* Поиск */
+        .search-box { width: 100%; padding: 15px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; font-size: 16px; outline: none; }
+        
+        /* Сетка героев */
+        .hero-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; max-height: 300px; overflow-y: auto; padding: 10px; background: rgba(15,23,42,0.6); border-radius: 8px; margin-bottom: 20px; }
+        .hero-item { cursor: pointer; text-align: center; position: relative; }
+        .hero-item img { width: 100%; border-radius: 4px; transition: 0.2s; border: 2px solid transparent; }
+        .hero-item:hover img { transform: scale(1.1); }
+        .hero-item.selected-enemy img { border-color: #ef4444; box-shadow: 0 0 10px #ef4444; }
+        .hero-item.selected-ally img { border-color: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        
+        .section-title { font-weight: bold; margin-bottom: 10px; margin-top: 20px; }
+        .enemy-title { color: #ef4444; }
+        .ally-title { color: #22c55e; }
+
+        button { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; margin-top: 20px; }
+        button:hover { background: #be123c; }
+
+        .result-box { background: rgba(15, 23, 42, 0.9); padding: 20px; border-radius: 12px; border-left: 5px solid var(--gold); margin-top: 20px; line-height: 1.6; }
+        .counter-item { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        .counter-item img { width: 40px; border-radius: 4px; }
+        .winrate { color: #22c55e; font-weight: bold; margin-left: auto; }
+        
+        .nav-link { display: block; text-align: center; margin-top: 20px; color: var(--secondary); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Draft Helper</h1>
+        <p style="text-align: center; color: var(--secondary);">Выберите врагов (красные) и союзников (зеленые)</p>
+        
+        <input type="text" id="searchInput" class="search-box" placeholder="Поиск героя...">
+
+        <form method="POST" id="draftForm" onsubmit="prepareForm()">
+            <div id="hiddenInputs"></div>
+
+            <div class="section-title enemy-title">Враги (кого контрим):</div>
+            <div class="hero-grid" id="enemyGrid">
+                {% for hero in heroes %}
+                <div class="hero-item" data-id="{{ hero.name }}" data-type="enemy">
+                    <img src="https://cdn.cloudflare.steamstatic.com{{ hero.icon }}" title="{{ hero.name }}" onerror="this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="section-title ally-title">Ваши союзники (опционально):</div>
+            <div class="hero-grid" id="allyGrid">
+                {% for hero in heroes %}
+                <div class="hero-item" data-id="{{ hero.name }}" data-type="ally">
+                    <img src="https://cdn.cloudflare.steamstatic.com{{ hero.icon }}" title="{{ hero.name }}" onerror="this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit">Найти лучший пик и разбор от ИИ</button>
+        </form>
+
+        {% if error %}<div class="result-box" style="border-color: #ef4444; color: #fda4af;">Ошибка: {{ error }}</div>{% endif %}
+
+        {% if ai_analysis %}
+        <div class="result-box">
+            <h3 style="color: var(--gold); margin-top: 0;">🤖 Разбор от ИИ:</h3>
+            {{ ai_analysis | safe }}
+        </div>
+        {% endif %}
+
+        {% if counter_picks %}
+        <div class="result-box">
+            <h3 style="color: var(--accent); margin-top: 0;">📊 Топ контр-пиков (по статистике):</h3>
+            {% for pick in counter_picks %}
+            <div class="counter-item">
+                <img src="https://cdn.cloudflare.steamstatic.com{{ pick.icon }}">
+                <span>{{ pick.name }}</span>
+                <span class="winrate">{{ "%.1f"|format(pick.win_rate) }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <a href="/" class="nav-link">← Вернуться на главную</a>
+    </div>
+
+    <script>
+        let selectedEnemies = [];
+        let selectedAllies = [];
+
+        document.querySelectorAll('.hero-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const type = this.getAttribute('data-type');
+                
+                if (type === 'enemy') {
+                    if (selectedEnemies.includes(id)) {
+                        selectedEnemies = selectedEnemies.filter(i => i !== id);
+                        this.classList.remove('selected-enemy');
+                    } else {
+                        selectedEnemies.push(id);
+                        this.classList.add('selected-enemy');
+                    }
+                } else {
+                    if (selectedAllies.includes(id)) {
+                        selectedAllies = selectedAllies.filter(i => i !== id);
+                        this.classList.remove('selected-ally');
+                    } else {
+                        selectedAllies.push(id);
+                        this.classList.add('selected-ally');
+                    }
+                }
+            });
+        });
+
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('.hero-item').forEach(item => {
+                const heroName = item.querySelector('img').getAttribute('title').toLowerCase();
+                item.style.display = heroName.includes(term) ? 'block' : 'none';
+            });
+        });
+
+        function prepareForm() {
+            const hiddenInputs = document.getElementById('hiddenInputs');
+            hiddenInputs.innerHTML = '';
+
+            selectedEnemies.forEach(name => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'enemy_hero';
+                input.value = name;
+                hiddenInputs.appendChild(input);
+            });
+
+            selectedAllies.forEach(name => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'ally_hero';
+                input.value = name;
+                hiddenInputs.appendChild(input);
+            });
+        }
+    </script>
+</body>
+</html>

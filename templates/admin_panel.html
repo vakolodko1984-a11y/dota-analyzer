@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Управление Премиумом</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; --border: #334155; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 40px; margin: 0; }
+        .container { max-width: 800px; margin: 0 auto; background: var(--card-bg); padding: 40px; border-radius: 16px; border: 1px solid var(--border); }
+        h1 { color: var(--gold); margin-top: 0; text-align: center; }
+        .form-group { display: flex; gap: 10px; margin-bottom: 30px; }
+        input { flex-grow: 1; padding: 15px; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: white; }
+        button { padding: 15px 30px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #be123c; }
+        .success { background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #22c55e; }
+        .error { background: rgba(225, 29, 72, 0.1); color: #fda4af; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid var(--accent); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--gold); }
+        .btn-remove { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 5px 10px; font-size: 12px; }
+        .btn-remove:hover { background: var(--accent); color: white; }
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👑 Управление Премиумом</h1>
+        
+        {% if success %}<div class="success">{{ success }}</div>{% endif %}
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+        <form method="POST" class="form-group">
+            <input type="text" name="steam_id" placeholder="Введите Steam ID (64-битный)" required>
+            <button type="submit" name="action" value="give">Выдать Премиум</button>
+        </form>
+
+        <h3>Активные подписки:</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Steam ID</th>
+                    <th>Дата активации</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in premium_users %}
+                <tr>
+                    <td>{{ user[0] }}</td>
+                    <td>{{ user[1] }}</td>
+                    <td>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="steam_id" value="{{ user[0] }}">
+                            <button type="submit" name="action" value="remove" class="btn-remove">Снять</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" style="text-align: center;">Пока нет активных подписок.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <a href="/admin/logout" class="nav-link">Выйти из админки</a>
+        <a href="/" class="nav-link">← На главную</a>
+    </div>
+</body>
+</html>

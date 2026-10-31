@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Колесо Фортуны</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; --border: #334155; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: var(--card-bg); padding: 40px; border-radius: 16px; width: 100%; max-width: 600px; border: 1px solid var(--border); text-align: center; }
+        h1 { color: var(--gold); margin-top: 0; }
+        
+        .wheel-wrapper { position: relative; width: 320px; height: 320px; margin: 30px auto; }
+        .pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 40px; color: var(--gold); z-index: 10; text-shadow: 0 0 10px #000; }
+        
+        svg { width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 30px rgba(251, 191, 36, 0.4); border: 8px solid var(--gold); transition: transform 4s cubic-bezier(0.17, 0.67, 0.1, 1); }
+        
+        /* Уменьшенный шрифт и правильное выравнивание */
+        text { fill: white; font-size: 8px; font-weight: bold; text-anchor: middle; dominant-baseline: middle; text-shadow: 1px 1px 2px #000; }
+        
+        .btn-spin { background: var(--accent); color: white; border: none; padding: 15px 40px; border-radius: 8px; font-size: 20px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 20px; box-shadow: 0 4px 15px var(--accent-glow); }
+        .btn-spin:hover { background: #be123c; transform: scale(1.05); }
+        .btn-spin:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .result-box { margin-top: 30px; padding: 20px; border-radius: 12px; border: 2px solid var(--gold); background: rgba(15, 23, 42, 0.9); font-size: 18px; font-weight: bold; color: var(--gold); }
+        .premium-lock { background: rgba(225, 29, 72, 0.1); border: 1px solid var(--accent); padding: 20px; border-radius: 12px; margin-top: 20px; }
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎰 Колесо Фортуны</h1>
+        <p style="color: var(--secondary);">Испытай удачу!</p>
+        
+        {% if is_premium %}
+            <div class="wheel-wrapper">
+                <div class="pointer">▼</div>
+                <svg id="wheel" viewBox="0 0 100 100">
+                    <!-- Сектора (6 штук по 60 градусов) -->
+                    <!-- Сектор 1 (Продление) - от 0 до 60 -->
+                    <path d="M50,50 L50,0 A50,50 0 0,1 93.3,25 Z" fill="#e11d48" />
+                    <!-- Сектор 2 (Пусто) - от 60 до 120 -->
+                    <path d="M50,50 L93.3,25 A50,50 0 0,1 93.3,75 Z" fill="#334155" />
+                    <!-- Сектор 3 (Скин) - от 120 до 180 -->
+                    <path d="M50,50 L93.3,75 A50,50 0 0,1 50,100 Z" fill="#22c55e" />
+                    <!-- Сектор 4 (Lamb) - от 180 до 240 -->
+                    <path d="M50,50 L50,100 A50,50 0 0,1 6.7,75 Z" fill="#8b5cf6" />
+                    <!-- Сектор 5 (Аркана) - от 240 до 300 -->
+                    <path d="M50,50 L6.7,75 A50,50 0 0,1 6.7,25 Z" fill="#fbbf24" />
+                    <!-- Сектор 6 (Coins) - от 300 до 360 -->
+                    <path d="M50,50 L6.7,25 A50,50 0 0,1 50,0 Z" fill="#3b82f6" />
+                    
+                    <!-- Текст (повернут по центру сектора) -->
+                    <text x="70" y="20" transform="rotate(30 50 50)">Продление</text>
+                    <text x="70" y="20" transform="rotate(90 50 50)">Пусто</text>
+                    <text x="70" y="20" transform="rotate(150 50 50)">Скин</text>
+                    <text x="70" y="20" transform="rotate(210 50 50)">Lamb</text>
+                    <text x="70" y="20" transform="rotate(270 50 50)">Аркана</text>
+                    <text x="70" y="20" transform="rotate(330 50 50)">Coins</text>
+                </svg>
+            </div>
+            <form method="POST" id="spinForm">
+                <button type="submit" class="btn-spin" id="spinBtn">Крутить колесо</button>
+            </form>
+        {% else %}
+            <div class="premium-lock">
+                <h3 style="color: var(--accent);">🔒 Доступно только для Премиум-подписки</h3>
+                <p>Оформи подписку за 99₽, чтобы крутить колесо и выигрывать скины и арканы!</p>
+                <a href="/premium" class="btn-spin" style="display: inline-block; text-decoration: none;">Купить Премиум</a>
+            </div>
+        {% endif %}
+
+        {% if result %}
+            <div class="result-box">
+                🎉 Результат: {{ result }}
+            </div>
+        {% endif %}
+
+        <a href="/" class="nav-link">← Вернуться на главную</a>
+    </div>
+
+    {% if is_premium %}
+    <script>
+        const form = document.getElementById('spinForm');
+        const wheel = document.getElementById('wheel');
+        const btn = document.getElementById('spinBtn');
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            btn.disabled = true;
+            
+            // Получаем индекс выигрышного сектора из Python
+            const winIndex = {{ win_index|default(0) }}(;)
+            
+            // Каждый сектор по 60 градусов. 
+            // Сектор 0: 0-60, центр 30. Сектор 1: 60-120, центр 90. И т.д.
+            const sectorAngle = 60;
+            const targetAngle = (winIndex * sectorAngle) + (sectorAngle / 2);
+            
+            // Крутим на 5 полных оборотов (1800) + корректируем, чтобы стрелка (сверху) указала на нужный сектор.
+            // Так как стрелка сверху (12 часов), а сектора начинаются с 0 (тоже 12 часов), 
+            // нам нужно повернуть колесо так, чтобы центр выигрышного сектора оказался наверху.
+            // Поэтому мы вычитаем targetAngle из 360.
+            const rotation = 1800 + (360 - targetAngle);
+            
+            wheel.style.transform = `rotate(${rotation}deg)`;
+            
+            setTimeout(() => { form.submit(); }, 4000);
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

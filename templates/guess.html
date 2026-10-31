@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Угадай винрейт</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #3b82f6; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; }
+        body { font-family: 'Segoe UI', sans-serif; color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; background: var(--bg); position: relative; }
+        body::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.15), transparent 60%); z-index: -1; }
+        
+        .container { background: var(--card-bg); padding: 40px; border-radius: 16px; width: 100%; max-width: 600px; border: 1px solid #334155; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; z-index: 1; text-align: center; }
+        h1 { color: var(--accent); margin-top: 0; text-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        
+        .score-board { font-size: 18px; margin-bottom: 20px; color: var(--secondary); }
+        .score-board span { color: var(--gold); font-weight: bold; }
+
+        .hero-img { width: 150px; height: 84px; border-radius: 8px; border: 3px solid var(--accent); object-fit: cover; margin-bottom: 10px; }
+        .hero-name { font-size: 24px; font-weight: bold; margin-bottom: 30px; }
+        
+        .btn-group { display: flex; gap: 20px; justify-content: center; }
+        .guess-btn { 
+            padding: 15px 40px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        .btn-high { background: #22c55e; color: white; box-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
+        .btn-high:hover { background: #16a34a; transform: scale(1.05); }
+        .btn-low { background: #ef4444; color: white; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+        .btn-low:hover { background: #dc2626; transform: scale(1.05); }
+        
+        .start-btn { background: var(--accent); color: white; padding: 15px 40px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        .start-btn:hover { background: #2563eb; transform: scale(1.05); }
+
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; font-weight: bold; transition: 0.3s; padding: 10px; border: 1px solid #334155; border-radius: 8px; }
+        .nav-link:hover { color: #fff; background: rgba(59, 130, 246, 0.2); border-color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Угадай винрейт</h1>
+        
+        {% if hero %}
+            <div class="score-board">Счёт: <span>{{ score }}</span> / {{ total }}</div>
+            <img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/{{ hero.id }}.png" class="hero-img" onerror="this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+            <div class="hero-name">{{ hero.name }}</div>
+            
+            <p style="color: var(--secondary); margin-bottom: 20px;">У этого героя винрейт ВЫШЕ или НИЖЕ 50%?</p>
+            
+            <form method="POST" class="btn-group">
+                <input type="hidden" name="action" value="guess">
+                <button type="submit" name="guess" value="high" class="guess-btn btn-high">ВЫШЕ 50%</button>
+                <button type="submit" name="guess" value="low" class="guess-btn btn-low">НИЖЕ 50%</button>
+            </form>
+        {% else %}
+            <p style="color: var(--secondary); margin-bottom: 30px; font-size: 18px;">Проверь свою интуицию! Угадай, у какого героя винрейт выше 50%, а у какого ниже.</p>
+            <form method="POST">
+                <input type="hidden" name="action" value="start">
+                <button type="submit" class="start-btn">Начать игру</button>
+            </form>
+        {% endif %}
+
+        <a href="/" class="nav-link">← Вернуться на главную</a>
+    </div>
+</body>
+</html>

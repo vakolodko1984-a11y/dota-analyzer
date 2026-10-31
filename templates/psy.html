@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ИИ-Психолог</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; --border: #334155; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .container { background: var(--card-bg); padding: 30px; border-radius: 16px; width: 100%; max-width: 700px; border: 1px solid var(--border); display: flex; flex-direction: column; height: 80vh; }
+        h1 { text-align: center; color: var(--gold); margin-top: 0; }
+        
+        .chat-box { flex-grow: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        
+        .message { max-width: 80%; padding: 12px 18px; border-radius: 12px; font-size: 15px; line-height: 1.5; }
+        .message.user { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+        .message.ai { align-self: flex-start; background: rgba(255,255,255,0.1); color: var(--text); border-bottom-left-radius: 4px; border: 1px solid var(--border); }
+        
+        .input-area { display: flex; gap: 10px; }
+        input[type="text"] { flex-grow: 1; padding: 15px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: white; font-size: 16px; outline: none; }
+        button { padding: 15px 25px; background: var(--gold); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #d97706; transform: scale(1.05); }
+        
+        .nav-link { display: block; text-align: center; margin-top: 20px; color: var(--secondary); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 ИИ-Психолог</h1>
+        <p style="text-align: center; color: var(--secondary); margin-bottom: 20px;">Выговорись, если тильт. Я помогу.</p>
+        
+        <div class="chat-box" id="chat-box">
+            {% if not history %}
+            <div class="message ai">Привет! Я здесь, чтобы помочь тебе справиться с тильтом. Что случилось? Проиграл матч?</div>
+            {% endif %}
+            {% for msg in history %}
+                <div class="message {{ 'user' if msg.role == 'user' else 'ai' }}">{{ msg.content }}</div>
+            {% endfor %}
+        </div>
+        
+        <form method="POST" class="input-area">
+            <input type="text" name="message" placeholder="Напиши, что тебя беспокоит..." required autocomplete="off">
+            <button type="submit">Отправить</button>
+        </form>
+        
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <form method="POST" style="flex: 1;">
+                <button type="submit" name="reset" value="true" style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--secondary); color: var(--secondary); border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                    🔄 Начать заново
+                </button>
+            </form>
+            <a href="/" style="flex: 1; text-align: center; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; text-decoration: none; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='#be123c'" onmouseout="this.style.background='var(--accent)'">
+                ← На главную
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Прокрутка чата вниз при загрузке
+        const chatBox = document.getElementById('chat-box');
+        chatBox.scrollTop = chatBox.scrollHeight;
+    </script>
+    <script>
+        // Показываем спиннер при отправке формы
+        document.querySelector('form').addEventListener('submit', function() {
+            // Создаем оверлей, если его нет
+            if (!document.getElementById('loader-overlay')) {
+                const loader = document.createElement('div');
+                loader.id = 'loader-overlay';
+                loader.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 17, 32, 0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 20px; backdrop-filter: blur(5px);';
+                loader.innerHTML = `
+                    <div style="width: 60px; height: 60px; border: 6px solid rgba(255,255,255,0.1); border-top: 6px solid #e11d48; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <div style="color: white; font-size: 20px; font-weight: bold; font-family: 'Segoe UI', sans-serif;">ИИ ДУМАЕТ...</div>
+                    <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+                `;
+                document.body.appendChild(loader);
+            }
+        });
+    </script>
+</body>
+</html>

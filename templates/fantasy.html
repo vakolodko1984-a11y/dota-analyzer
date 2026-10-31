@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фэнтези-лига</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; --border: #334155; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid var(--border); }
+        h1 { text-align: center; color: var(--gold); margin-top: 0; }
+        .tournament-title { text-align: center; color: var(--accent); font-size: 20px; margin-bottom: 30px; font-weight: bold; }
+        
+        .role-section { margin-bottom: 30px; background: rgba(15,23,42,0.6); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .role-title { color: var(--gold); font-size: 20px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+        
+        .player-card { 
+            background: rgba(15,23,42,0.9); padding: 15px; border-radius: 8px; text-align: center; 
+            border: 2px solid var(--border); cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: center; 
+        }
+        .player-card:hover { border-color: var(--gold); }
+        
+        .player-card .name { font-weight: 700; display: block; font-size: 18px; color: var(--text); margin-bottom: 5px; }
+        .player-card .team { font-size: 13px; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        input[type="radio"] { display: none; }
+        input[type="radio"]:checked + .player-card { 
+            border-color: var(--accent); 
+            background: rgba(225, 29, 72, 0.15); 
+            box-shadow: 0 0 15px var(--accent-glow); 
+        }
+        input[type="radio"]:checked + .player-card .name { color: var(--accent); }
+
+        button { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 20px; font-weight: bold; margin-top: 10px; transition: 0.3s; }
+        button:hover { background: #be123c; transform: scale(1.01); }
+
+        .error { color: #fda4af; text-align: center; margin-bottom: 15px; font-weight: bold; }
+        .success { color: #22c55e; text-align: center; margin-bottom: 15px; font-weight: bold; }
+        
+        .nav-link { display: block; text-align: center; margin-top: 25px; color: var(--secondary); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { color: var(--accent); }
+
+        /* Стили для таблицы результатов */
+        .result-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .result-table th, .result-table td { padding: 15px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+        .result-table th { color: var(--gold); font-size: 16px; text-transform: uppercase; letter-spacing: 1px;}
+        .result-table tr:hover { background: rgba(255,255,255,0.05); }
+        .result-table td { font-size: 16px; }
+        .points { color: #22c55e; font-weight: bold; font-size: 20px; }
+        
+        /* Класс для выравнивания последней колонки по правому краю */
+        .align-right { text-align: right !important; }
+        
+        .btn-change { background: transparent; border: 1px solid var(--secondary); color: var(--secondary); padding: 12px 24px; width: auto; font-size: 16px; margin-top: 20px; }
+        .btn-change:hover { background: var(--secondary); color: var(--bg); }
+
+        .locked-message { 
+            text-align: center; 
+            color: #fda4af; 
+            margin-top: 25px; 
+            font-weight: bold; 
+            font-size: 16px;
+            background: rgba(225, 29, 72, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px dashed var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 Фэнтези-лига</h1>
+        <div class="tournament-title">Турнир: {{ current_tournament }}</div>
+        
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        {% if success %}<div class="success">{{ success }}</div>{% endif %}
+
+        {% if saved_roster %}
+            <!-- Режим просмотра результатов -->
+            <h2 style="text-align: center; color: var(--gold); margin-bottom: 20px;">Твой состав</h2>
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th>Позиция</th>
+                        <th>Игрок</th>
+                        <th>Команда</th>
+                        <th class="align-right">Очки</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in player_stats %}
+                    <tr>
+                        <td style="color: var(--secondary); font-weight: bold;">{{ p.role }}</td>
+                        <td><strong>{{ p.name }}</strong></td>
+                        <td>{{ p.team }}</td>
+                        <td class="points align-right">{{ p.points }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <!-- БЛОК С ОБЩЕЙ СУММОЙ ОЧКОВ -->
+            <div style="text-align: right; margin-top: 20px; padding-right: 15px; font-size: 22px; font-weight: bold;">
+                <span style="color: var(--secondary); font-size: 16px; margin-right: 10px; text-transform: uppercase;">Всего очков:</span>
+                <span style="color: var(--gold); text-shadow: 0 0 10px rgba(251, 191, 36, 0.4);">{{ player_stats | sum(attribute='points') | round(1) }}</span>
+            </div>
+            
+            {% if not is_locked %}
+            <div style="text-align: center;">
+                <a href="/fantasy?reset=1" class="btn-change" style="display: inline-block; text-decoration: none;">Изменить состав</a>
+            </div>
+            {% else %}
+            <div class="locked-message">
+                🔒 Состав заблокирован. Удачи на турнире!
+            </div>
+            {% endif %}
+
+            <!-- БЛОК С КНОПКОЙ ЛИДЕРБОРДА -->
+            <div style="text-align: center; margin-top: 25px;">
+                <a href="/fantasy/leaderboard" style="display: inline-block; padding: 12px 24px; background: rgba(251, 191, 36, 0.15); border: 1px solid var(--gold); color: var(--gold); text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; transition: 0.3s;" onmouseover="this.style.background='var(--gold)'; this.style.color='#000';" onmouseout="this.style.background='rgba(251, 191, 36, 0.15)'; this.style.color='var(--gold)';">
+                    🏆 Таблица лидеров
+                </a>
+            </div>
+
+        {% else %}
+            <!-- Режим выбора -->
+            <p style="text-align: center; color: var(--secondary); margin-bottom: 20px;">Выберите по одному игроку на каждую позицию. <br><span style="color: var(--accent); font-weight: bold; font-size: 14px;">Внимание: после сохранения изменить состав будет нельзя!</span></p>
+
+            <form method="POST">
+                {% set roles = [(1, "Керри (1)"), (2, "Мидер (2)"), (3, "Оффлейнер (3)"), (4, "Саппорт (4)"), (5, "Саппорт (5)")] %}
+                
+                {% for role_num, role_name in roles %}
+                <div class="role-section">
+                    <div class="role-title">{{ role_name }}</div>
+                    <div class="player-grid">
+                        {% for player in available_players if player.role == role_num %}
+                        <div>
+                            <input type="radio" name="role_{{ role_num }}" value="{{ player.name }}" id="player_{{ role_num }}_{{ loop.index }}" required>
+                            <label for="player_{{ role_num }}_{{ loop.index }}" class="player-card">
+                                <span class="name">{{ player.name }}</span>
+                                <span class="team">{{ player.team }}</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <button type="submit">Сохранить состав навсегда</button>
+            </form>
+        {% endif %}
+
+        <a href="/tournaments" class="nav-link">← Вернуться к турнирам</a>
+    </div>
+</body>
+</html>

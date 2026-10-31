@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Мой профиль</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --border: #334155; --gold: #fbbf24; }
+        body { font-family: 'Segoe UI', sans-serif; color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; background: var(--bg); position: relative; }
+        body::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 50% 50%, rgba(225, 29, 72, 0.1), transparent 60%); z-index: -1; }
+        
+        .container { background: var(--card-bg); padding: 40px; border-radius: 16px; width: 100%; max-width: 800px; border: 1px solid var(--border); backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; z-index: 1; }
+        
+        .profile-header { display: flex; align-items: center; gap: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent); object-fit: cover; }
+        .info h1 { margin: 0; color: var(--text); }
+        .info p { margin: 5px 0; color: var(--secondary); }
+        
+        /* Стили для блока ачивок */
+        .achievements-box { margin-bottom: 30px; background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .achievements-title { color: var(--gold); margin-top: 0; margin-bottom: 15px; font-size: 20px; }
+        .achievement-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        
+        .ach-card { 
+            background: rgba(251, 191, 36, 0.1); border: 1px solid var(--gold); 
+            padding: 12px 15px; border-radius: 8px; display: flex; align-items: center; gap: 12px; 
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.15);
+        }
+        .ach-card.locked { 
+            background: rgba(255, 255, 255, 0.05); border: 1px dashed var(--border); 
+            box-shadow: none; opacity: 0.6; 
+        }
+        .ach-icon { font-size: 28px; }
+        .ach-info { display: flex; flex-direction: column; width: 100%; }
+        .ach-name { font-weight: bold; color: var(--gold); font-size: 16px; }
+        .ach-desc { font-size: 12px; color: var(--secondary); }
+        
+        /* Классы для прогресс-баров (без математики внутри) */
+        .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--gold); border-radius: 3px; }
+        
+        .matches-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .match-card { display: flex; align-items: center; gap: 15px; background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); overflow: hidden; }
+        .hero-icon { width: 60px; height: 34px; border-radius: 4px; object-fit: cover; }
+        
+        .nav-link { display: block; text-align: center; margin-top: 20px; color: var(--secondary); text-decoration: none; font-weight: bold; transition: 0.3s; }
+        .nav-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="profile-header">
+            <img src="{{ avatar }}" class="avatar" onerror="this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+            <div class="info">
+                <h1>{{ name }}</h1>
+                <p>Steam ID: {{ steam_id }}</p>
+                <a href="/logout" style="color: #ff6b6b; text-decoration: none; font-size: 14px;">Выйти</a>
+            </div>
+        </div>
+
+        <!-- БЛОК АЧИВОК -->
+        <div class="achievements-box">
+            <h3 class="achievements-title">🏆 Твои достижения</h3>
+            <div class="achievement-list">
+                
+                <!-- Ачивка: Начинающий предсказатель (200 очков фэнтези) -->
+                {% if 'points_200' in user_achievements %}
+                <div class="ach-card">
+                    <span class="ach-icon">🥉</span>
+                    <div class="ach-info">
+                        <span class="ach-name">Начинающий предсказатель</span>
+                        <span class="ach-desc">Набрано 200 очков в фэнтези</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="ach-card locked">
+                    <span class="ach-icon" style="filter: grayscale(100%);">🥉</span>
+                    <div class="ach-info">
+                        <span class="ach-name" style="color: var(--secondary);">Начинающий предсказатель</span>
+                        <span class="ach-desc">Наберите 200 очков</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Ачивка: Повелитель фэнтези (700 очков) -->
+                {% if 'points_700' in user_achievements %}
+                <div class="ach-card" style="border-color: var(--accent); background: rgba(225, 29, 72, 0.1); box-shadow: 0 0 15px rgba(225, 29, 72, 0.2);">
+                    <span class="ach-icon">🔥</span>
+                    <div class="ach-info">
+                        <span class="ach-name" style="color: var(--accent);">Повелитель фэнтези</span>
+                        <span class="ach-desc">Набрано 700 очков (Аркана Террорблейда)</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="ach-card locked">
+                    <span class="ach-icon" style="filter: grayscale(100%);">🔥</span>
+                    <div class="ach-info">
+                        <span class="ach-name" style="color: var(--secondary);">Повелитель фэнтези</span>
+                        <span class="ach-desc">Наберите 700 очков</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Ачивка: Мастер анализа (20 матчей) -->
+                {% if match_count >= 20 %}
+                <div class="ach-card" style="border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);">
+                    <span class="ach-icon">📊</span>
+                    <div class="ach-info">
+                        <span class="ach-name" style="color: #3b82f6;">Мастер анализа</span>
+                        <span class="ach-desc">Разобрано 20 матчей</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="ach-card locked">
+                    <span class="ach-icon" style="filter: grayscale(100%);">📊</span>
+                    <div class="ach-info">
+                        <span class="ach-name" style="color: var(--secondary);">Мастер анализа</span>
+                        <span class="ach-desc">Разберите 20 матчей</span>
+                        <!-- Используем переменную match_percent, которую мы считаем в Python -->
+                        <div class="progress-bar"><div class="progress-fill" style="width: {{ match_percent }};"></div></div>
+                        <span style="font-size: 10px; color: var(--secondary); text-align: right;">{{ match_count }}/20</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Ачивка: Фанат Драфта (10 драфтов) -->
+                {% if draft_count >= 10 %}
+                <div class="ach-card" style="border-color: #a855f7; background: rgba(168, 85, 247, 0.1); box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);">
+                    <span class="ach-icon">🛡️</span>
+                    <div class="ach-info">
+                        <span class="ach-name" style="color: #a855f7;">Фанат Драфта</span>
+                        <span class="ach-desc">Использовано 10 раз</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="ach-card locked">
+                    <span class="ach-icon" style="filter: grayscale(100%);">🛡️</span>
+                    <div class="ach-info">
+                        <span class="ach-name" style="color: var(--secondary);">Фанат Драфта</span>
+                        <span class="ach-desc">Используйте Draft Helper 10 раз</span>
+                        <!-- Используем переменную draft_percent, которую мы считаем в Python -->
+                        <div class="progress-bar"><div class="progress-fill" style="width: {{ draft_percent }};"></div></div>
+                        <span style="font-size: 10px; color: var(--secondary); text-align: right;">{{ draft_count }}/10</span>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+        
+        <h3>Последние матчи: <span style="font-size: 12px; color: #94a3b8; font-weight: normal;">(Источник: {{ source }})</span></h3>
+        
+        {% if matches %}
+            <div class="matches-grid">
+                {% for m in matches %}
+                <div class="match-card">
+                    <div style="width: 120px; font-weight: bold;">#{{ m.id }}</div>
+                    <div style="width: 80px; color: var(--secondary);">{{ m.duration if m.duration > 0 else 'Н/Д' }} мин</div>
+                    <div style="display: flex; gap: 5px; flex-grow: 1;">
+                        {% for h in m.heroes %}
+                        <img src="https://cdn.cloudflare.steamstatic.com{{ h.icon }}" title="{{ h.name }}" class="hero-icon">
+                        {% endfor %}
+                    </div>
+                    <a href="/?match_id={{ m.id }}" style="margin-left: auto; background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; text-decoration: none;">Разобрать</a>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: var(--secondary); text-align: center;">Матчи не найдены.</p>
+        {% endif %}
+        
+        <a href="/" class="nav-link">← Вернуться на главную</a>
+    </div>
+</body>
+</html>

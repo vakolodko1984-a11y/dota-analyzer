@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Все про-игроки</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; }
+        body { font-family: 'Segoe UI', sans-serif; color: var(--text); background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: var(--card-bg); padding: 40px; border-radius: 16px; border: 1px solid #334155; }
+        h1 { text-align: center; color: var(--gold); }
+        .pro-card { display: flex; align-items: center; gap: 15px; padding: 15px; border-bottom: 1px solid #334155; }
+        .pro-avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; }
+        .pro-info { flex-grow: 1; display: flex; flex-direction: column; }
+        .pro-name { font-weight: bold; font-size: 18px; }
+        .pro-team { font-size: 14px; color: var(--secondary); }
+        .pro-links { display: flex; gap: 10px; }
+        .pro-links a { text-decoration: none; font-size: 20px; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 8px; transition: 0.3s; }
+        .pro-links a:hover { background: var(--accent); color: white; }
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; font-weight: bold; }
+        .nav-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⭐ Все про-игроки</h1>
+        {% for pro in pro_players %}
+        <div class="pro-card">
+            <img src="{{ pro.avatar }}" class="pro-avatar" onerror="this.onerror=null;this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+            <div class="pro-info">
+                <span class="pro-name">{{ pro.name }}</span>
+                <span class="pro-team">{{ pro.team }}</span>
+            </div>
+            <div class="pro-links">
+                <a href="{{ pro.liquipedia }}" target="_blank" title="Liquipedia">📖</a>
+                <a href="{{ pro.dotabuff }}" target="_blank" title="Dotabuff">📊</a>
+            </div>
+        </div>
+        {% endfor %}
+        <a href="/" class="nav-link">← Вернуться на главную</a>
+    </div>
+</body>
+</html>

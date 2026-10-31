@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ИИ-Тренер</title>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; --border: #334155; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .container { background: var(--card-bg); padding: 40px; border-radius: 16px; width: 100%; max-width: 800px; border: 1px solid var(--border); backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { text-align: center; color: var(--gold); margin-top: 0; text-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
+        p.subtitle { text-align: center; color: var(--secondary); margin-bottom: 30px; }
+        
+        .form-group { display: flex; gap: 15px; margin-bottom: 30px; }
+        input[type="text"] { flex-grow: 1; padding: 15px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: white; font-size: 16px; outline: none; }
+        input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+        button { padding: 15px 30px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #be123c; box-shadow: 0 0 15px var(--accent); }
+
+        .result-box { background: rgba(15, 23, 42, 0.9); padding: 25px; border-radius: 12px; border-left: 5px solid var(--accent); line-height: 1.8; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-top: 20px; }
+        .result-box h3 { margin-top: 0; color: var(--accent); }
+        
+        .error { background: rgba(225, 29, 72, 0.1); color: #fda4af; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--accent); margin-bottom: 20px; font-weight: bold; }
+        
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; font-weight: bold; transition: 0.3s; }
+        .nav-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 ИИ-Тренер</h1>
+        <p class="subtitle">
+            Введи свой Steam ID, и ИИ разберет твои последние 5 матчей. 
+            {% if session.get('steam_id') %} (Можно оставить поле пустым, я возьму твой ID).{% endif %}
+        </p>
+        
+        <form method="POST" class="form-group">
+            <input type="text" name="steam_id" placeholder="Например, 76561199000000000" value="{{ searched_id or '' }}">
+            <button type="submit">Разобрать меня</button>
+        </form>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        {% if ai_feedback %}
+            <div class="result-box">
+                <h3>Слово тренера:</h3>
+                {{ ai_feedback | safe }}
+            </div>
+        {% endif %}
+                <div style="text-align: center; margin-top: 30px;">
+            <a href="/" style="display: inline-block; padding: 12px 30px; background: var(--accent); color: white; border: none; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; transition: 0.3s;" onmouseover="this.style.background='#be123c'" onmouseout="this.style.background='var(--accent)'">
+                ← На главную
+            </a>
+        </div>
+    </div>
+    <script>
+        // Показываем спиннер при отправке формы
+        document.querySelector('form').addEventListener('submit', function() {
+            // Создаем оверлей, если его нет
+            if (!document.getElementById('loader-overlay')) {
+                const loader = document.createElement('div');
+                loader.id = 'loader-overlay';
+                loader.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 17, 32, 0.85); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 20px; backdrop-filter: blur(5px);';
+                loader.innerHTML = `
+                    <div style="width: 60px; height: 60px; border: 6px solid rgba(255,255,255,0.1); border-top: 6px solid #e11d48; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <div style="color: white; font-size: 20px; font-weight: bold; font-family: 'Segoe UI', sans-serif;">ИИ ДУМАЕТ...</div>
+                    <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+                `;
+                document.body.appendChild(loader);
+            }
+        });
+    </script>
+</body>
+</html>

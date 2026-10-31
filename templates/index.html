@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dota 2 AI Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --accent-glow: rgba(225, 29, 72, 0.5); --text: #f8fafc; --secondary: #94a3b8; --border: #334155; --gold: #fbbf24; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--text); display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; background: var(--bg); position: relative; overflow-x: hidden; padding-bottom: 60px; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 15% 50%, rgba(225, 29, 72, 0.15), transparent 40%), radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.15), transparent 40%); z-index: -1; animation: bgPulse 10s infinite alternate; }
+        @keyframes bgPulse { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
+        
+        .top-left-tag { position: absolute; top: 20px; left: 30px; font-size: 28px; font-weight: 900; color: #fbbf24; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); text-decoration: none; transition: 0.3s; }
+        .top-left-tag:hover { color: #fff; }
+        
+        .auth-bar { position: absolute; top: 20px; right: 30px; z-index: 10; }
+        .btn-steam { background: #171a21; border: 3px solid #66c0f4; color: #66c0f4; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 20px; display: flex; align-items: center; gap: 10px; transition: 0.3s; box-shadow: 0 0 25px rgba(102, 192, 244, 0.6); }
+        .btn-steam:hover { background: #66c0f4; color: #171a21; box-shadow: 0 0 35px rgba(102, 192, 244, 0.9); transform: translateY(-2px); }
+        .user-badge { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px; border: 2px solid #66c0f4; box-shadow: 0 0 15px rgba(102, 192, 244, 0.2); }
+
+        .layout { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 30px; width: 100%; max-width: 1400px; z-index: 1; margin-top: 80px; }
+        @media (max-width: 1200px) { .layout { grid-template-columns: 2fr 1fr; } .psy-container { grid-column: span 2; } }
+        @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .psy-container { grid-column: span 1; } }
+
+        .container, .pros-container, .psy-container { background: var(--card-bg); padding: 35px; border-radius: 16px; border: 1px solid var(--border); backdrop-filter: blur(12px); box-shadow: 0 8px 32px rgba(0,0,0,0.5); position: relative; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .container:hover, .pros-container:hover, .psy-container:hover { box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-2px); }
+
+        h1 { color: var(--text); text-align: center; margin-top: 0; font-size: 28px; text-shadow: 0 0 10px rgba(255,255,255,0.1);}
+        p.subtitle { text-align: center; color: var(--secondary); margin-bottom: 30px; }
+        
+        form.main-form { display: flex; gap: 15px; margin-bottom: 30px; }
+        input[type="text"] { flex-grow: 1; padding: 15px; border-radius: 8px; border: 1px solid var(--border); background: rgba(15, 23, 42, 0.8); color: white; font-size: 16px; outline: none; transition: 0.3s; }
+        input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+        button { padding: 15px 30px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 15px var(--accent-glow); }
+        button:hover { background: #be123c; box-shadow: 0 0 20px var(--accent); }
+
+        .result-box { background: rgba(15, 23, 42, 0.9); padding: 25px; border-radius: 12px; border-left: 5px solid var(--accent); line-height: 1.8; font-size: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .result-box h3 { margin-top: 0; color: var(--accent); }
+        .match-info { color: var(--secondary); font-size: 14px; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .match-info strong { color: var(--accent); }
+
+        .team-title { text-align: center; text-transform: uppercase; letter-spacing: 1px; margin: 25px 0 15px 0; font-size: 16px; }
+        .team-radiant { color: #22c55e; }
+        .team-dire { color: #ef4444; }
+        
+        .players-grid { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; padding: 0; }
+        .player-card { background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid var(--border); text-align: center; transition: 0.3s; width: 110px; }
+        .player-card:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        .radiant-card { border-color: rgba(34, 197, 94, 0.3); }
+        .dire-card { border-color: rgba(239, 68, 68, 0.3); }
+        .hero-icon { width: 100%; height: 60px; border-radius: 4px; margin-bottom: 8px; object-fit: cover; }
+        .hero-name { font-weight: bold; color: var(--text); font-size: 13px; }
+        
+        .items-row { display: flex; justify-content: center; gap: 3px; margin-top: 8px; flex-wrap: wrap; }
+        .item-icon { width: 24px; height: 18px; border-radius: 3px; border: 1px solid var(--border); object-fit: cover; background: rgba(0,0,0,0.3); }
+
+        .charts-container { margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px; }
+        .chart-title { font-size: 16px; font-weight: bold; color: var(--gold); margin-bottom: 15px; text-align: center;}
+
+        .hero-of-day { background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); margin-bottom: 20px; }
+        .hero-of-day img { width: 200px; height: auto; border-radius: 8px; border: 2px solid var(--gold); margin-bottom: 10px; object-fit: cover; }
+        .hero-of-day h3 { color: var(--gold); margin: 10px 0; }
+        
+        .error { background: rgba(225, 29, 72, 0.1); color: #fda4af; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--accent); }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 25px; }
+        .nav-btn { padding: 10px 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; color: var(--secondary); text-decoration: none; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 5px;}
+        .nav-btn:hover { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
+        
+        .pros-container h2, .psy-container h2 { color: #fbbf24; text-align: center; margin-top: 0; font-size: 22px; text-shadow: 0 0 10px rgba(251, 191, 36, 0.3); }
+        .pro-card { display: flex; align-items: center; gap: 15px; padding: 12px; border-bottom: 1px solid var(--border); transition: 0.3s; }
+        .pro-card:hover { background: rgba(255,255,255,0.05); border-radius: 8px; }
+        .pro-avatar { width: 45px; height: 45px; border-radius: 50%; border: 2px solid #fbbf24; background: #1e293b; object-fit: cover;}
+        .pro-info { display: flex; flex-direction: column; flex-grow: 1; }
+        .pro-name { font-weight: bold; color: var(--text); }
+        .pro-team { font-size: 12px; color: var(--secondary); }
+        
+        .pro-links { display: flex; gap: 5px; margin-left: auto; }
+        .pro-links a { text-decoration: none; font-size: 16px; transition: 0.3s; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 5px;}
+        .pro-links a:hover { background: var(--accent); transform: scale(1.1); }
+        
+        .pros-list::-webkit-scrollbar { width: 6px; }
+        .pros-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        .pros-list::-webkit-scrollbar-track { background: transparent; }
+
+        .history-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .history-item { background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border); transition: 0.3s; font-size: 14px;}
+        .history-item:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .donate-footer { position: fixed; bottom: 15px; left: 0; right: 0; text-align: center; color: var(--secondary); font-size: 13px; z-index: 10; background: rgba(11, 17, 32, 0.8); padding: 5px; backdrop-filter: blur(5px); }
+        .loader-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 17, 32, 0.8); z-index: 100; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
+        .loader-overlay.active { display: flex; }
+        .spinner { width: 60px; height: 60px; border: 6px solid rgba(255,255,255,0.1); border-top: 6px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        .loader-text { font-size: 20px; font-weight: bold; color: var(--text); letter-spacing: 2px; animation: pulse 1.5s infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .theme-toggle { position: fixed; bottom: 20px; right: 20px; background: var(--card-bg); border: 2px solid var(--border); color: var(--text); width: 50px; height: 50px; border-radius: 50%; cursor: pointer; font-size: 24px; display: flex; justify-content: center; align-items: center; z-index: 20; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .theme-toggle:hover { background: var(--accent); color: white; border-color: var(--accent); transform: scale(1.1); }
+
+        body.light-theme { --bg: #f8fafc; --card-bg: rgba(255, 255, 255, 0.95); --text: #0f172a; --secondary: #475569; --border: #cbd5e1; --gold: #d97706; --accent: #e11d48; --accent-glow: rgba(225, 29, 72, 0.2); }
+        body.light-theme::before { background: radial-gradient(circle at 15% 50%, rgba(225, 29, 72, 0.05), transparent 40%), radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.05), transparent 40%); }
+        body.light-theme .top-left-tag { color: #0f172a; text-shadow: none; }
+        body.light-theme input[type="text"] { background: #fff; border-color: #cbd5e1; color: #0f172a; }
+        body.light-theme .result-box { background: #fff; color: #0f172a; }
+        body.light-theme .player-card { background: #fff; }
+        body.light-theme .hero-of-day { background: #fff; }
+        body.light-theme .nav-btn { background: #fff; color: #0f172a; }
+        body.light-theme .nav-btn:hover { background: var(--accent); color: #fff; }
+        body.light-theme .pros-container, body.light-theme .psy-container { background: #fff; }
+        body.light-theme .pro-card:hover { background: #f1f5f9; }
+        body.light-theme .donate-footer { background: rgba(248, 250, 252, 0.9); color: #475569; }
+        body.light-theme .theme-toggle { background: #fff; border-color: #cbd5e1; color: #0f172a; }
+        body.light-theme .theme-toggle:hover { background: var(--accent); color: #fff; }
+    </style>
+</head>
+<body>
+    <a href="/" class="top-left-tag">Dota 2 AI Analyzer</a>
+
+    <div class="auth-bar">
+        {% if not is_logged_in %}
+            <a href="/login/steam" class="btn-steam">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg" style="width: 32px;"> Войти через Steam
+            </a>
+        {% else %}
+            <div class="user-badge">
+                <img src="{{ user_avatar }}" style="width: 40px; height: 40px; border-radius: 50%;">
+                <a href="/my-profile" style="color: #66c0f4; font-weight: bold; font-size: 18px; text-decoration: none;">{{ user_name }}</a>
+                <a href="/logout" style="color: #ff6b6b; font-size: 14px; text-decoration: none; margin-left: 10px;">Выйти</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="loader-overlay" id="loader"><div class="spinner"></div><div class="loader-text">ИИ АНАЛИЗИРУЕТ МАТЧ...</div></div>
+    <button class="theme-toggle" id="theme-toggle" title="Сменить тему">🌙</button>
+
+    <div class="layout fade-in">
+        <!-- ЛЕВАЯ КОЛОНКА: Аналитика -->
+        <div class="container">
+            <h1>🤖 Dota 2 AI Analyzer</h1>
+            
+            <div style="margin-bottom: 30px; background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+                <h3 style="color: var(--gold); margin-top: 0; margin-bottom: 15px; text-align: center;">🏅 Твои награды</h3>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                    <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; padding: 10px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; flex: 1; min-width: 200px;">
+                        <span style="font-size: 28px;">🔍</span><div><div style="font-weight: bold; color: #22c55e; font-size: 16px;">Начинающий аналитик</div><div style="font-size: 13px; color: var(--secondary);">Разобрано 5 матчей</div></div>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.05); border: 1px dashed var(--border); padding: 10px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; flex: 1; min-width: 200px; opacity: 0.5;">
+                        <span style="font-size: 28px; filter: grayscale(100%);">🔥</span><div><div style="font-weight: bold; font-size: 16px;">Повелитель фэнтези</div><div style="font-size: 13px;">700 очков (Аркана Террорблейда)</div></div>
+                    </div>
+                </div>
+            </div>
+
+            {% if hero_of_day %}
+            <div class="hero-of-day fade-in">
+                <h3>🌟 Герой дня</h3>
+                <img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/{{ hero_of_day.system_name }}.png" alt="{{ hero_of_day.name }}">
+                <h2>{{ hero_of_day.name }}</h2>
+                {% if hero_of_day_stats %}<p>Винрейт: <span style="color: #22c55e; font-weight: bold;">{{ hero_of_day_stats.calculated_winrate }}%</span></p>{% endif %}
+                <a href="/heroes?hero_name={{ hero_of_day.name }}" class="nav-btn" style="display: inline-block; margin-top: 10px;">Узнать контр-пики</a>
+            </div>
+            {% endif %}
+
+            <p class="subtitle">Введи ID матча для детального разбора</p>
+            <form method="POST" class="main-form" id="analyze-form">
+                <input type="text" name="match_id" placeholder="Например, 9067797589" required>
+                <button type="submit" name="action" value="match">Анализировать</button>
+            </form>
+
+            <div style="margin-bottom: 20px;"><span style="color: var(--secondary); font-size: 14px;">Ваши последние запросы:</span><div id="history-list" class="history-list"></div></div>
+
+            {% if error %}<div class="error">Ошибка: {{ error }}</div>{% endif %}
+            
+            {% if analysis %}
+                <div class="result-box fade-in">
+                    <h3>Вердикт ИИ:</h3>{% if analyzed_match_id %}<p class="match-info">Матч ID: <strong>{{ analyzed_match_id }}</strong></p>{% endif %}{{ analysis | safe }}
+                </div>
+                {% if players %}
+                <h4 class="team-title team-radiant">Radiant (Свет)</h4>
+                <div class="players-grid fade-in">
+                    {% for p in players if p.isRadiant %}
+                    <div class="player-card radiant-card">
+                        <img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/{{ p.system_name }}.png" class="hero-icon" onerror="this.onerror=null;this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+                        <span class="hero-name">{{ p.name }}</span>
+                        <div class="items-row">{% set player_slot = loop.index0 %}{% if items_data.get(player_slot|string) %}{% for item_id in items_data[player_slot|string] %}<img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/{{ item_id }}.png" class="item-icon" title="Предмет {{ item_id }}">{% endfor %}{% endif %}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <h4 class="team-title team-dire">Dire (Тьма)</h4>
+                <div class="players-grid fade-in">
+                    {% for p in players if not p.isRadiant %}
+                    <div class="player-card dire-card">
+                        <img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/{{ p.system_name }}.png" class="hero-icon" onerror="this.onerror=null;this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+                        <span class="hero-name">{{ p.name }}</span>
+                        <div class="items-row">{% set player_slot = 128 + loop.index0 %}{% if items_data.get(player_slot|string) %}{% for item_id in items_data[player_slot|string] %}<img src="https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/{{ item_id }}.png" class="item-icon" title="Предмет {{ item_id }}">{% endfor %}{% endif %}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if chart_labels %}
+                <div class="charts-container fade-in">
+                    <div class="chart-title">📊 Рейтинг по GPM</div>
+                    <div id="chart-data" data-labels="{{ chart_labels | tojson | forceescape }}" data-values="{{ chart_values | tojson | forceescape }}" style="display: none;"></div>
+                    <div style="position: relative; height: 300px; width: 100%;"><canvas id="gpmChart"></canvas></div>
+                </div>
+                {% endif %}
+
+                {% if networth_labels %}
+                <div class="charts-container fade-in" style="margin-top: 40px;">
+                    <div class="chart-title">💰 Преимущество по золоту (Radiant vs Dire)</div>
+                    <div id="networth-chart-data" data-labels="{{ networth_labels | tojson | forceescape }}" data-values="{{ networth_values | tojson | forceescape }}" style="display: none;"></div>
+                    <div style="position: relative; height: 300px; width: 100%;"><canvas id="networthChart"></canvas></div>
+                </div>
+                {% endif %}
+            {% endif %}
+
+            <div class="nav-links">
+                <a href="/draft" class="nav-btn">🛡️ Draft Helper</a>
+                <a href="/heroes" class="nav-btn">📖 Справочник</a>
+                <a href="/rating" class="nav-btn">🏆 Рейтинг героев</a>
+                <a href="/tournaments" class="nav-btn">🏆 Турниры</a>
+                <a href="/leaderboard_players" class="nav-btn" style="background: rgba(251, 191, 36, 0.2); border-color: var(--gold); color: var(--gold);">🥇 Топ игроков (GPM)</a>
+                <a href="/random" class="nav-btn" style="background: rgba(225,29,72,0.2); border-color: var(--accent);">🎲 Случайный</a>
+                <a href="/guess" class="nav-btn" style="background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; color: #60a5fa;">🎯 Угадай винрейт</a>
+                <a href="/coach" class="nav-btn" style="background: rgba(251, 191, 36, 0.15); border-color: var(--gold); color: var(--gold);">🧠 ИИ-Тренер</a>
+            </div>
+        </div>
+
+        <!-- СРЕДНЯЯ КОЛОНКА: Про-игроки -->
+        <div class="pros-container fade-in">
+            <h2>⭐ Топ про-игроки</h2>
+            <p style="text-align: center; color: var(--secondary); font-size: 13px; margin-bottom: 20px;">Легенды мировой Доты</p>
+            <div class="pros-list" style="max-height: 800px; overflow-y: auto; padding-right: 5px;">
+                {% for pro in pro_players %}
+                <div class="pro-card">
+                    <img src="{{ pro.avatar }}" class="pro-avatar" onerror="this.onerror=null;this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+                    <div class="pro-info"><span class="pro-name">{{ pro.name }}</span><span class="pro-team">{{ pro.team }}</span></div>
+                    <div class="pro-links"><a href="{{ pro.liquipedia }}" target="_blank" title="Liquipedia">📖</a><a href="{{ pro.dotabuff }}" target="_blank" title="Dotabuff">📊</a></div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align: center; margin-top: 20px;"><a href="/pros" class="nav-btn" style="display: inline-block; font-size: 14px;">Смотреть всех</a></div>
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА: ИИ-Психолог -->
+        <div class="psy-container fade-in">
+            <h2>🧠 ИИ-Психолог</h2>
+            <p style="color: var(--secondary); font-size: 14px; margin-bottom: 25px; line-height: 1.5; text-align: center;">Тильтуешь после лузстрика?<br>Не можешь уснуть из-за -25 MMR?<br><br>Выговорись ИИ, он тебя поймет и успокоит.</p>
+            <div style="font-size: 80px; margin-bottom: 30px; text-align: center; filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.3));">🛋️</div>
+            <div style="text-align: center;">
+                <a href="/psy" style="display: inline-block; background: var(--gold); color: #000; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; transition: 0.3s; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 25px rgba(251, 191, 36, 0.8)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(251, 191, 36, 0.4)';">
+                    Поговорить
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="donate-footer">Сайт создан вручную в одиночку обычным любителем. Можете поддержать развитие сайта <a href="https://www.donationalerts.com/r/asod888" target="_blank" style="color: var(--gold); font-weight: bold; text-decoration: none;">донатом</a>.
+        <!-- Кнопки Премиум и Колесо (в левом нижнем углу) -->
+    <div style="position: fixed; bottom: 140px; left: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px;">
+        <a href="/premium" style="display: flex; align-items: center; gap: 8px; background: var(--gold); color: #000; border: 2px solid var(--gold); padding: 12px 20px; border-radius: 50px; font-weight: bold; text-decoration: none; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4); transition: 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <span style="font-size: 18px;">👑</span> Премиум
+        </a>
+        <a href="/wheel" style="display: flex; align-items: center; gap: 8px; background: #a855f7; color: #fff; border: 2px solid #a855f7; padding: 12px 20px; border-radius: 50px; font-weight: bold; text-decoration: none; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4); transition: 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <span style="font-size: 18px;">🎰</span> Колесо
+        </a>
+    </div>    
+        <!-- Кнопка и окно Обратной связи -->
+    <div id="feedback-widget" style="position: fixed; bottom: 20px; left: 20px; z-index: 1000; font-family: 'Segoe UI', sans-serif;">
+        <div id="feedback-window" style="display: none; background: var(--card-bg); border: 2px solid var(--accent); border-radius: 12px; padding: 20px; width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 10px;">
+            <h3 style="color: var(--gold); margin-top: 0; font-size: 18px; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px;">Предложения по развитию проекта и реклама</h3>
+            <p style="color: var(--secondary); font-size: 14px; text-align: center; margin-bottom: 20px;">Пишите по любым вопросам!</p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="https://t.me/shisuyagod" target="_blank" style="display: block; text-align: center; background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; color: #22c55e; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='#22c55e'; this.style.color='white';" onmouseout="this.style.background='rgba(34, 197, 94, 0.2)'; this.style.color='#22c55e';">💬 Телеграм</a>
+                <a href="https://vk.ru/jzxdxsuz" target="_blank" style="display: block; text-align: center; background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #3b82f6; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='#3b82f6'; this.style.color='white';" onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'; this.style.color='#3b82f6';">🌐 ВКонтакте</a>
+            </div>
+        </div>
+        <button id="feedback-toggle" style="background: var(--accent); color: white; border: 2px solid var(--accent); padding: 12px 20px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px var(--accent-glow); transition: 0.3s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <span style="font-size: 18px;">✉️</span> Обратная связь
+        </button>
+    </div>
+
+    <!-- Окно Вопросы (FAQ) -->
+    <div id="faq-widget" style="position: fixed; bottom: 80px; left: 20px; z-index: 1000; font-family: 'Segoe UI', sans-serif;">
+        <div id="faq-window" style="display: none; background: var(--card-bg); border: 2px solid var(--gold); border-radius: 12px; padding: 20px; width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 10px;">
+            <h3 style="color: var(--gold); margin-top: 0; font-size: 18px; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px;">Часто задаваемые вопросы</h3>
+            <div style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                <div style="margin-bottom: 15px;">
+                    <strong style="color: var(--accent); font-size: 15px;">Почему именно мы?</strong>
+                    <p style="color: var(--secondary); font-size: 14px; margin-top: 5px; line-height: 1.5;">Мы — единственный сайт, который использует передовой ИИ (GigaChat) для глубокого анализа матчей и драфтов в реальном времени. Мы не просто показываем цифры, мы объясняем, как выиграть.</p>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong style="color: var(--accent); font-size: 15px;">Как получить Аркану?</strong>
+                    <p style="color: var(--secondary); font-size: 14px; margin-top: 5px; line-height: 1.5;">Соберите состав в Фэнтези-лиге, наберите более 700 очков и дождитесь конца турнира. Лучшие предсказатели получают скины и Арканы на свои аккаунты.</p>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong style="color: var(--accent); font-size: 15px;">Что такое Draft Helper?</strong>
+                    <p style="color: var(--secondary); font-size: 14px; margin-top: 5px; line-height: 1.5;">Это ваш личный тренер по драфту. Выберите врагов и союзников, а ИИ подскажет лучшие контр-пики и синергии, чтобы вы гарантированно выиграли пик.</p>
+                </div>
+            </div>
+        </div>
+        <button id="faq-toggle" style="background: var(--gold); color: #000; border: 2px solid var(--gold); padding: 12px 20px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4); transition: 0.3s; display: flex; align-items: center; gap: 8px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <span style="font-size: 18px;">❓</span> Вопросы
+        </button>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('theme-toggle'); const body = document.body;
+        if (localStorage.getItem('theme') === 'light') { body.classList.add('light-theme'); themeToggle.innerText = '☀️'; }
+        themeToggle.addEventListener('click', () => { body.classList.toggle('light-theme'); if (body.classList.contains('light-theme')) { localStorage.setItem('theme', 'light'); themeToggle.innerText = '☀️'; } else { localStorage.setItem('theme', 'dark'); themeToggle.innerText = '🌙'; } });
+        document.getElementById('analyze-form').addEventListener('submit', function() { document.getElementById('loader').classList.add('active'); });
+        
+        document.getElementById('feedback-toggle').addEventListener('click', function() {
+            const window = document.getElementById('feedback-window');
+            if (window.style.display === 'none') { window.style.display = 'block'; } else { window.style.display = 'none'; }
+        });
+
+        document.getElementById('faq-toggle').addEventListener('click', function() {
+            const window = document.getElementById('faq-window');
+            if (window.style.display === 'none') { window.style.display = 'block'; } else { window.style.display = 'none'; }
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const chartDataDiv = document.getElementById('chart-data');
+            if (chartDataDiv) {
+                const labels = JSON.parse(chartDataDiv.getAttribute('data-labels')); const values = JSON.parse(chartDataDiv.getAttribute('data-values'));
+                if (labels.length > 0) { new Chart(document.getElementById('gpmChart').getContext('2d'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'GPM', data: values, backgroundColor: 'rgba(225, 29, 72, 0.7)', borderColor: 'rgba(225, 29, 72, 1)', borderWidth: 1, borderRadius: 5 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(128, 128, 128, 0.2)' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#94a3b8' } } } } }); }
+            }
+            const networthDataDiv = document.getElementById('networth-chart-data');
+            if (networthDataDiv) {
+                const labels = JSON.parse(networthDataDiv.getAttribute('data-labels')); const values = JSON.parse(networthDataDiv.getAttribute('data-values'));
+                if (labels.length > 0) { new Chart(document.getElementById('networthChart').getContext('2d'), { type: 'line', data: { labels: labels, datasets: [{ label: 'Разница в золоте', data: values, borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.2)', borderWidth: 2, fill: true, pointRadius: 0, tension: 0.1 }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { grid: { color: 'rgba(128, 128, 128, 0.2)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Золото', color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8', maxTicksLimit: 10 } } }, plugins: { legend: { labels: { color: '#94a3b8' } } } } }); }
+            }
+
+            let history = JSON.parse(localStorage.getItem('dota_match_history')) || [];
+            let historyContainer = document.getElementById('history-list');
+            if (history.length === 0) {
+                historyContainer.innerHTML = '<span style="color: #64748b; font-size: 13px;">Пока пусто...</span>';
+            } else {
+                history.forEach(id => {
+                    let span = document.createElement('span');
+                    span.className = 'history-item';
+                    span.innerText = id;
+                    span.onclick = () => analyzeMatch(id);
+                    historyContainer.appendChild(span);
+                });
+            }
+        });
+
+        function analyzeMatch(id) {
+            let form = document.querySelector('form.main-form');
+            form.querySelector('input[name="match_id"]').value = id;
+            let history = JSON.parse(localStorage.getItem('dota_match_history')) || [];
+            if (!history.includes(id)) {
+                history.unshift(id);
+                if (history.length > 5) history.pop();
+                localStorage.setItem('dota_match_history', JSON.stringify(history));
+            }
+            document.getElementById('loader').classList.add('active');
+            form.submit();
+        }
+
+        document.querySelector('form.main-form').addEventListener('submit', function(e) {
+            let id = this.querySelector('input[name="match_id"]').value.trim();
+            if (id && !isNaN(id)) {
+                let history = JSON.parse(localStorage.getItem('dota_match_history')) || [];
+                if (!history.includes(id)) {
+                    history.unshift(id);
+                    if (history.length > 5) history.pop();
+                    localStorage.setItem('dota_match_history', JSON.stringify(history));
+                }
+            }
+        });
+    </script>
+</body>
+</html>

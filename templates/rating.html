@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dota 2 Hero Rating</title>
+    <style>
+        :root { --bg: #0f172a; --card-bg: rgba(30, 41, 59, 0.95); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; color: var(--text); display: flex; justify-content: center; 
+            min-height: 100vh; margin: 0; padding: 40px 20px; box-sizing: border-box; 
+            background-image: url('{{ url_for("static", filename="pivooooo.jpg") }}'); 
+            background-size: cover; background-position: center; background-attachment: fixed; background-color: var(--bg); position: relative; 
+        }
+        body::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(15, 23, 42, 0.8); z-index: -1; }
+        
+        .top-left-tag { position: absolute; top: 20px; left: 30px; font-size: 28px; font-weight: 900; color: #3b82f6; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 0px #000; opacity: 0.9; }
+        .top-right-tag { position: absolute; top: 20px; right: 30px; font-size: 24px; font-weight: 900; color: #fbbf24; text-transform: uppercase; letter-spacing: 2px; transform: rotate(-3deg); text-shadow: 2px 2px 0px #000; opacity: 0.8; }
+        
+        .container { background: var(--card-bg); padding: 40px; border-radius: 16px; width: 100%; max-width: 800px; border: 1px solid #334155; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.7); position: relative; z-index: 1; }
+        h1 { text-align: center; color: var(--accent); margin-top: 0; text-shadow: 0 0 15px rgba(225, 29, 72, 0.4); }
+        
+        .rating-item { 
+            display: flex; align-items: center; gap: 20px; padding: 15px; 
+            background: rgba(15, 23, 42, 0.6); border-radius: 12px; margin-bottom: 15px; 
+            border-left: 4px solid var(--accent); transition: 0.3s;
+        }
+        .rating-item:hover { transform: translateX(5px); background: rgba(15, 23, 42, 0.9); box-shadow: 0 0 20px rgba(225, 29, 72, 0.2); }
+        
+        .rank { font-weight: 900; color: var(--secondary); font-size: 24px; width: 40px; text-align: center; text-shadow: 1px 1px 2px #000; }
+        
+        /* Стили для больших артов */
+        .hero-art { 
+            width: 120px; height: 68px; border-radius: 8px; object-fit: cover; 
+            border: 2px solid #475569; box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+        }
+        
+        .hero-name { flex-grow: 1; font-weight: bold; font-size: 22px; text-shadow: 1px 1px 2px #000; }
+        
+        .win-rate { 
+            color: #22c55e; font-weight: 900; font-size: 24px; 
+            background: rgba(34, 197, 94, 0.1); padding: 5px 15px; border-radius: 8px;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .ai-box { 
+            background: rgba(15, 23, 42, 0.9); padding: 25px; border-radius: 12px; 
+            border-left: 5px solid var(--gold); margin-top: 30px; line-height: 1.6; 
+            font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .ai-title { color: var(--gold); margin-top: 0; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+
+        .nav-link { display: block; text-align: center; margin-top: 20px; color: var(--secondary); text-decoration: none; font-weight: bold; transition: color 0.3s; }
+        .nav-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="top-left-tag">zxclub</div>
+    <div class="top-right-tag">VOVAPUTIN</div>
+    
+    <div class="container">
+        <h1>🏆 Топ-10 героев по винрейту</h1>
+        <p style="text-align: center; color: var(--secondary); margin-bottom: 30px;">
+            Самые сильные герои текущей недели (по данным STRATZ).
+        </p>
+
+        {% for hero in leaderboard %}
+        <div class="rating-item">
+            <span class="rank">#{{ loop.index }}</span>
+            {% if hero.img %}
+            <img src="https://cdn.cloudflare.steamstatic.com{{ hero.img }}" class="hero-art" onerror="this.src='https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/global/dota2_logo_symbol.png';">
+            {% endif %}
+            <span class="hero-name">{{ hero.name }}</span>
+            <span class="win-rate">{{ hero.winrate }}%</span>
+        </div>
+        {% endfor %}
+
+        {% if meta_analysis %}
+        <div class="ai-box fade-in">
+            <h3 class="ai-title">🤖 Анализ меты от ИИ:</h3>
+            {{ meta_analysis | safe }}
+        </div>
+        {% endif %}
+
+        <a href="/" class="nav-link">← Вернуться к анализу матчей</a>
+        <a href="/draft" class="nav-link">🛡️ Перейти к Draft Helper</a>
+        <a href="/heroes" class="nav-link">📖 Справочник героев</a>
+    </div>
+</body>
+</html>

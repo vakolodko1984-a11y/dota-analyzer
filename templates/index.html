@@ -184,7 +184,15 @@
 
             <div style="margin-bottom: 20px;"><span style="color: var(--secondary); font-size: 14px;">Ваши последние запросы:</span><div id="history-list" class="history-list"></div></div>
 
-            {% if error %}<div class="error">Ошибка: {{ error }}</div>{% endif %}
+            {% if error %}
+                <div class="error" style="text-align: center;">
+                    Ошибка: {{ error }}
+                    <br><br>
+                    <a href="/premium" style="background: var(--gold); color: black; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; transition: 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        👑 Купить Премиум
+                    </a>
+                </div>
+            {% endif %}
             
             {% if analysis %}
                 <div class="result-box fade-in">

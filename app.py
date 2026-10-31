@@ -723,7 +723,7 @@ def leaderboard_players():
     
     if top_players:
         cursor.execute('DELETE FROM leaderboard_cache')
-                cursor.execute('INSERT INTO leaderboard_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(top_players), current_time))
+        cursor.execute('INSERT INTO leaderboard_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(top_players), current_time))
         conn.commit()
         
     conn.close()

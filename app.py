@@ -553,28 +553,75 @@ def heroes_base():
 
 @app.route('/rating')
 def rating():
-    if not STRATZ_API_TOKEN: return "Нет токена", 500
-    url = "https://api.stratz.com/graphql"
-    headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-    q = "query GetHeroStats { heroStats { winWeek { heroId winCount matchCount } } }"
-    try:
-        r = requests.post(url, headers=headers, json={"query": q}, timeout=20, verify=False)
-        if r.status_code != 200: return "Ошибка STRATZ", 500
-        stats = r.json().get("data", {}).get("heroStats", {}).get("winWeek", [])
-        hero_totals = {}
-        for s in stats:
-            h_id = s.get("heroId")
-            if h_id not in hero_totals: hero_totals[h_id] = {"win": 0, "match": 0}
-            hero_totals[h_id]["win"] += s.get("winCount", 0); hero_totals[h_id]["match"] += s.get("matchCount", 0)
-        leaderboard = []
-        for h_id, totals in hero_totals.items():
-            if totals["match"] > 5000:
-                h_info = HEROES.get(str(h_id), {})
-                leaderboard.append({"name": h_info.get('localized_name', 'Unknown'), "winrate": round((totals["win"] / totals["match"]) * 100, 2), "img": h_info.get('img', '').split('?')[0]})
-        top_10 = sorted(leaderboard, key=lambda x: x['winrate'], reverse=True)[:10]
-        meta_analysis = analyze_with_gigachat(f"Топ-5 героев: {', '.join([h['name'] for h in top_10[:5]])}. Краткий анализ меты (3-4 предложения).") if len(top_10) >= 5 else None
-        return render_template('rating.html', leaderboard=top_10, meta_analysis=meta_analysis)
-    except: return "Ошибка при загрузке", 500
+    stats = []
+    
+    # 1. Пытаемся через STRATZ
+    if STRATZ_API_TOKEN:
+        url = "https://api.stratz.com/graphql"
+        headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
+        q = "query GetHeroStats { heroStats { winWeek { heroId winCount matchCount } } }"
+        try:
+            r = requests.post(url, headers=headers, json={"query": q}, timeout=10, verify=False)
+            if r.status_code == 200:
+                data = r.json()
+                if "errors" not in data:
+                    raw_stats = data.get("data", {}).get("heroStats", {}).get("winWeek", [])
+                    # Преобразуем данные STRATZ в нужный формат
+                    hero_totals = {}
+                    for s in raw_stats:
+                        h_id = s.get("heroId")
+                        if h_id not in hero_totals: hero_totals[h_id] = {"win": 0, "match": 0}
+                        hero_totals[h_id]["win"] += s.get("winCount", 0)
+                        hero_totals[h_id]["match"] += s.get("matchCount", 0)
+                    
+                    for h_id, totals in hero_totals.items():
+                        if totals["match"] > 5000:
+                            stats.append({
+                                "id": h_id,
+                                "winrate": round((totals["win"] / totals["match"]) * 100, 2),
+                                "matches": totals["match"]
+                            })
+        except: pass
+
+    # 2. Если STRATZ упал или пусто — берем из OpenDota
+    if not stats:
+        try:
+            r = requests.get("https://api.opendota.com/api/heroStats", timeout=15)
+            if r.status_code == 200:
+                data = r.json()
+                for h in data:
+                    # Считаем винрейт за последнюю неделю (pub)
+                    wins = h.get("1_win", 0)
+                    picks = h.get("1_pick", 0)
+                    if picks > 5000:
+                        stats.append({
+                            "id": h.get("id"),
+                            "winrate": round((wins / picks) * 100, 2),
+                            "matches": picks
+                        })
+        except: pass
+
+    # 3. Сортируем и берем топ-10
+    top_10 = sorted(stats, key=lambda x: x['winrate'], reverse=True)[:10]
+    
+    # Дополняем данными из локального файла (имя, картинка)
+    leaderboard = []
+    for h in top_10:
+        h_info = HEROES.get(str(h["id"]), {})
+        leaderboard.append({
+            "name": h_info.get('localized_name', 'Unknown'), 
+            "winrate": h["winrate"], 
+            "img": h_info.get('img', '').split('?')[0]
+        })
+
+    # Просим ИИ написать анализ меты (если есть хотя бы 5 героев)
+    meta_analysis = None
+    if len(leaderboard) >= 5:
+        try:
+            meta_analysis = analyze_with_gigachat(f"Топ-5 героев: {', '.join([h['name'] for h in leaderboard[:5]])}. Краткий анализ меты (3-4 предложения).")
+        except: pass
+
+    return render_template('rating.html', leaderboard=leaderboard, meta_analysis=meta_analysis)
 
 @app.route('/random')
 def random_hero():

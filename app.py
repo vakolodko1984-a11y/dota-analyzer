@@ -203,23 +203,52 @@ def get_hero_matchups(hero_id):
     return None
 
 def get_hero_info(hero_id):
-    if not STRATZ_API_TOKEN: return None
-    url = "https://api.stratz.com/graphql"
-    headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-    q = "query GetHeroStats { heroStats { winWeek { heroId winCount matchCount } } }"
+    # 1. Пытаемся через STRATZ
+    if STRATZ_API_TOKEN:
+        url = "https://api.stratz.com/graphql"
+        headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
+        q = "query GetHeroStats { heroStats { winWeek { heroId winCount matchCount } } }"
+        try:
+            r = requests.post(url, headers=headers, json={"query": q}, timeout=10, verify=False)
+            if r.status_code == 200:
+                data = r.json()
+                if "errors" not in data:
+                    stats = data.get("data", {}).get("heroStats", {}).get("winWeek", [])
+                    local = HEROES.get(str(hero_id), {})
+                    res = {"roles": local.get("roles", ["Неизвестно"]), "calculated_winrate": 0.0, "icon": local.get("icon", "")}
+                    for s in stats:
+                        if s.get("heroId") == int(hero_id) and s.get("matchCount", 0) > 0:
+                            res["calculated_winrate"] = round((s["winCount"] / s["matchCount"]) * 100, 2)
+                            return res
+        except: pass
+
+    # 2. Если STRATZ упал или пусто — идем в OpenDota
     try:
-        r = requests.post(url, headers=headers, json={"query": q}, timeout=20, verify=False)
+        r = requests.get(f"https://api.opendota.com/api/heroStats", timeout=15)
         if r.status_code == 200:
             data = r.json()
-            if "errors" not in data:
-                stats = data.get("data", {}).get("heroStats", {}).get("winWeek", [])
-                local = HEROES.get(str(hero_id), {})
-                res = {"roles": local.get("roles", ["Неизвестно"]), "calculated_winrate": 0.0, "icon": local.get("icon", "")}
-                for s in stats:
-                    if s.get("heroId") == int(hero_id) and s.get("matchCount", 0) > 0:
-                        res["calculated_winrate"] = round((s["winCount"] / s["matchCount"]) * 100, 2); break
-                return res
+            for hero_data in data:
+                if hero_data.get("id") == int(hero_id):
+                    local = HEROES.get(str(hero_id), {})
+                    # Считаем винрейт из общего числа игр и побед за неделю
+                    pro_wins = sum([hero_data.get(f"pro_win_{i}", 0) for i in range(1, 9)])
+                    pro_picks = sum([hero_data.get(f"pro_pick_{i}", 0) for i in range(1, 9)])
+                    
+                    # Если в про нет данных, берем паблик за неделю
+                    if pro_picks > 50:
+                        winrate = (pro_wins / pro_picks) * 100
+                    else:
+                        wins = hero_data.get("1_win", 0) # неделя 1
+                        picks = hero_data.get("1_pick", 0)
+                        winrate = (wins / picks * 100) if picks > 0 else 50.0
+
+                    return {
+                        "roles": local.get("roles", ["Неизвестно"]), 
+                        "calculated_winrate": round(winrate, 2), 
+                        "icon": local.get("icon", "")
+                    }
     except: pass
+    
     return None
 
 def get_top_heroes_for_hero_of_day():

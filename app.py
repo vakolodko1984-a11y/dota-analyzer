@@ -21,6 +21,8 @@ def init_db():
     c.execute('CREATE TABLE IF NOT EXISTS user_drafts (steam_id TEXT, drafted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
     c.execute('CREATE TABLE IF NOT EXISTS user_premium (steam_id TEXT PRIMARY KEY, is_active INTEGER DEFAULT 0, activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
     c.execute('CREATE TABLE IF NOT EXISTS user_spins (steam_id TEXT PRIMARY KEY, last_spin TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
+    # Новая таблица для кэша лидерборда GPM
+    c.execute('CREATE TABLE IF NOT EXISTS leaderboard_cache (id INTEGER PRIMARY KEY, data TEXT, updated_at REAL)')
     conn.commit(); conn.close()
 init_db()
 
@@ -310,7 +312,7 @@ PRO_PLAYERS_DATA = [
     {"name": "Darklord^", "team": "LEGION", "role": 1, "account_id": 879017980, "liquipedia": "https://liquipedia.net/dota2/Darklord", "dotabuff": "https://www.dotabuff.com/players/879017980"},
     {"name": "Stojkov", "team": "LEGION", "role": 2, "account_id": 262476000, "liquipedia": "https://liquipedia.net/dota2/Stojkov", "dotabuff": "https://www.dotabuff.com/players/262476000"},
     {"name": "SaberLight", "team": "LEGION", "role": 3, "account_id": 126212866, "liquipedia": "https://liquipedia.net/dota2/SaberLight", "dotabuff": "https://www.dotabuff.com/players/126212866"},
-        {"name": "Xsvampire", "team": "LEGION", "role": 4, "account_id": 326327879, "liquipedia": "https://liquipedia.net/dota2/Xsvampire", "dotabuff": "https://www.dotabuff.com/players/326327879"},
+    {"name": "Xsvampire", "team": "LEGION", "role": 4, "account_id": 326327879, "liquipedia": "https://liquipedia.net/dota2/Xsvampire", "dotabuff": "https://www.dotabuff.com/players/326327879"},
     {"name": "Kidaro", "team": "LEGION", "role": 5, "account_id": 104334048, "liquipedia": "https://liquipedia.net/dota2/Kidaro", "dotabuff": "https://www.dotabuff.com/players/104334048"}
 ]
 
@@ -651,68 +653,175 @@ def psy_chat():
             history.append({"role": "assistant", "content": ai_response}); session['psy_history'] = history; session.modified = True
         return redirect(url_for('psy_chat'))
     return render_template('psy.html', history=session.get('psy_history', []))
+
+# ==========================================
+# ИСПРАВЛЕННЫЙ ТОП ИГРОКОВ (GPM)
+# ==========================================
 @app.route('/leaderboard_players')
 def leaderboard_players():
     conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
     cursor = conn.cursor()
     
-    # Проверяем, есть ли свежие данные в кэше
-    cursor.execute('DROP TABLE IF EXISTS leaderboard_cache')
-    cursor.execute('CREATE TABLE IF NOT EXISTS leaderboard_cache (id INTEGER PRIMARY KEY, data TEXT, updated_at REAL)')
+    # Проверяем кэш
     cursor.execute('SELECT data, updated_at FROM leaderboard_cache WHERE id = 1')
     row = cursor.fetchone()
     current_time = time.time()
     
-    # Если данные моложе 15 минут (900 секунд), берем их
+    # Если данные моложе 15 минут — отдаем их
     if row and (current_time - row[1] < 900):
         conn.close()
         return render_template('leaderboard_players.html', top_players=json.loads(row[0]))
     
-    # Иначе собираем новые
     top_players = []
-    for player in PRO_PLAYERS_DATA:
-        acc_id = player.get('account_id')
-        if not acc_id: continue
-        
+    if STRATZ_API_TOKEN:
         url = "https://api.stratz.com/graphql"
         headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
         q = "query GetPlayerLastMatch($steamId: Long!) { player(steamAccountId: $steamId) { matches(request: { take: 1 }) { players { steamAccountId heroId goldPerMinute } } } }"
         
-        try:
-            # Уменьшили таймаут до 5 секунд, чтобы не висло
-            r = requests.post(url, headers=headers, json={"query": q, "variables": {"steamId": int(acc_id)}}, timeout=5, verify=False)
-            if r.status_code == 200:
-                data = r.json()
-                if "errors" not in data:
-                    p_data = data.get("data", {}).get("player")
-                    if p_data and p_data.get("matches"):
-                        match = p_data["matches"][0]
-                        for mp in match.get("players", []):
-                            if mp.get("steamAccountId") == acc_id:
-                                gpm = mp.get("goldPerMinute", 0)
-                                hero_id = mp.get("heroId")
-                                hero_info = HEROES.get(str(hero_id), {})
-                                top_players.append({
-                                    "name": player['name'],
-                                    "team": player['team'],
-                                    "gpm": gpm,
-                                    "hero": hero_info.get('localized_name', 'Unknown'),
-                                    "icon": hero_info.get('icon', '')
-                                })
-                                break
-        except: 
-            continue
-            
+        # Ограничиваем пул игроков (например, первыми 20), чтобы не долбить API 50 раз
+        for player in PRO_PLAYERS_DATA[:20]:
+            acc_id = player.get('account_id')
+            if not acc_id: continue
+            try:
+                # Таймаут 3 секунды, чтобы страница не висела вечно
+                r = requests.post(url, headers=headers, json={"query": q, "variables": {"steamId": int(acc_id)}}, timeout=3, verify=False)
+                                if r.status_code == 200:
+                    data = r.json()
+                    if "errors" not in data:
+                        p_data = data.get("data", {}).get("player")
+                        if p_data and p_data.get("matches"):
+                            match = p_data["matches"][0]
+                            for mp in match.get("players", []):
+                                if mp.get("steamAccountId") == acc_id:
+                                    gpm = mp.get("goldPerMinute", 0)
+                                    hero_id = mp.get("heroId")
+                                    hero_info = HEROES.get(str(hero_id), {})
+                                    top_players.append({
+                                        "name": player['name'],
+                                        "team": player['team'],
+                                        "gpm": gpm,
+                                        "hero": hero_info.get('localized_name', 'Unknown'),
+                                        "icon": hero_info.get('icon', '')
+                                    })
+                                    break
+            except:
+                continue
+                
     top_players = sorted(top_players, key=lambda x: x['gpm'], reverse=True)[:10]
     
-    # Сохраняем в кэш
+    # Сохраняем в кэш только если реально что-то нашли
     if top_players:
         cursor.execute('DELETE FROM leaderboard_cache')
         cursor.execute('INSERT INTO leaderboard_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(top_players), current_time))
         conn.commit()
+        
     conn.close()
-    
     return render_template('leaderboard_players.html', top_players=top_players)
+
+# ==========================================
+# ИСПРАВЛЕННАЯ ИГРА "УГАДАЙ ВИНРЕЙТ"
+# ==========================================
+@app.route('/guess', methods=['GET', 'POST'])
+def guess():
+    # Инициализация сессии
+    if 'guess_score' not in session:
+        session['guess_score'] = 0
+        session['guess_total'] = 0
+        session['guess_hero'] = None
+        session['guess_hero_winrate'] = None
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        # Начало игры / следующий раунд
+        if action == 'start':
+            # Получаем топ героев для пула (или просто всех, если API недоступен)
+            pool = get_top_heroes_for_hero_of_day()
+            if not pool:
+                pool = list(HEROES.keys())
+
+            # Выбираем случайного героя, у которого есть винрейт
+            hero_found = False
+            attempts = 0
+            while not hero_found and attempts < 10:
+                attempts += 1
+                h_id = random.choice(pool)
+                hero_info = get_hero_info(h_id)
+                if hero_info and hero_info.get('calculated_winrate', 0) > 0:
+                    local_name = HEROES.get(str(h_id), {}).get('localized_name', 'Unknown')
+                    session['guess_hero'] = {"id": h_id, "name": local_name}
+                    session['guess_hero_winrate'] = hero_info['calculated_winrate']
+                    hero_found = True
+
+            # Фолбэк, если API вообще не отвечает (берем любого и ставим рандомный винрейт)
+            if not hero_found:
+                h_id = random.choice(list(HEROES.keys()))
+                local_name = HEROES.get(str(h_id), {}).get('localized_name', 'Unknown')
+                session['guess_hero'] = {"id": h_id, "name": local_name}
+                session['guess_hero_winrate'] = round(random.uniform(45.0, 55.0), 2)
+
+            session.modified = True
+            return redirect(url_for('guess'))
+
+        # Ответ пользователя
+        elif action == 'guess':
+            user_guess = request.form.get('guess') # 'high' или 'low'
+            actual_winrate = session.get('guess_hero_winrate', 50.0)
+            hero_data = session.get('guess_hero')
+
+            if hero_data and actual_winrate is not None:
+                session['guess_total'] += 1
+                if user_guess == 'high' and actual_winrate > 50.0:
+                    session['guess_score'] += 1
+                elif user_guess == 'low' and actual_winrate < 50.0:
+                    session['guess_score'] += 1
+
+                # Можно вывести сообщение с результатом (правильно/неправильно)
+                session['guess_last_result'] = {
+                    "correct": (user_guess == 'high' and actual_winrate > 50.0) or (user_guess == 'low' and actual_winrate < 50.0),
+                    "actual_winrate": actual_winrate,
+                    "user_guess": user_guess,
+                    "hero_name": hero_data['name']
+                }
+                session.modified = True
+
+            # Загружаем следующего героя
+            pool = get_top_heroes_for_hero_of_day()
+            if not pool:
+                pool = list(HEROES.keys())
+            
+            hero_found = False
+            attempts = 0
+            while not hero_found and attempts < 10:
+                attempts += 1
+                h_id = random.choice(pool)
+                # Проверяем, чтобы не попался тот же герой
+                if session.get('guess_hero') and int(session['guess_hero']['id']) == int(h_id):
+                    continue
+                hero_info = get_hero_info(h_id)
+                if hero_info and hero_info.get('calculated_winrate', 0) > 0:
+                    local_name = HEROES.get(str(h_id), {}).get('localized_name', 'Unknown')
+                    session['guess_hero'] = {"id": h_id, "name": local_name}
+                    session['guess_hero_winrate'] = hero_info['calculated_winrate']
+                    hero_found = True
+
+            if not hero_found:
+                h_id = random.choice(list(HEROES.keys()))
+                local_name = HEROES.get(str(h_id), {}).get('localized_name', 'Unknown')
+                session['guess_hero'] = {"id": h_id, "name": local_name}
+                session['guess_hero_winrate'] = round(random.uniform(45.0, 55.0), 2)
+
+            session.modified = True
+            return redirect(url_for('guess'))
+
+    # Рендерим страницу
+    hero = session.get('guess_hero')
+    score = session.get('guess_score', 0)
+    total = session.get('guess_total', 0)
+    last_result = session.pop('guess_last_result', None) # Всплывающее сообщение
+    
+    return render_template('guess.html', hero=hero, score=score, total=total, last_result=last_result)
+
 @app.route('/premium')
 def premium():
     is_premium = False
@@ -728,8 +837,6 @@ def premium():
 
 @app.route('/premium/activate', methods=['POST'])
 def premium_activate():
-    # ВРЕМЕННАЯ АКТИВАЦИЯ (потом заменишь на проверку оплаты)
-    # Пока любой авторизованный пользователь может нажать кнопку и получить премиум
     if 'steam_id' in session:
         conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
         cursor = conn.cursor()
@@ -737,7 +844,6 @@ def premium_activate():
         conn.commit()
         conn.close()
     return redirect(url_for('premium'))
-import random
 
 @app.route('/wheel', methods=['GET', 'POST'])
 def wheel():
@@ -751,36 +857,36 @@ def wheel():
     is_premium = row and row[0] == 1
     
     result = None
-    win_index = 0 # По умолчанию 0
+    win_index = 0 
     
     if request.method == 'POST' and is_premium:
         rand = random.uniform(0, 100)
         
-        # Определяем приз и индекс сектора (0-5)
         if rand < 0.00001:
             result = "Аркана на любого героя! (Поздравляем, ты выиграл джекпот! Свяжись с админом)"
-            win_index = 4 # Аркана
+            win_index = 4
         elif rand < 0.06:
             result = "Inscribed Lamb для Slark! (Напиши админу для получения)"
-            win_index = 3 # Lamb
+            win_index = 3
         elif rand < 0.56:
             result = "Скин в Доте до 200 рублей!"
-            win_index = 2 # Скин
+            win_index = 2
         elif rand < 20.56:
             result = "Бесплатное продление подписки на месяц!"
-            win_index = 0 # Продление
+            win_index = 0
         elif rand < 44.99999:
             result = "Секретный приз: 1000 Dota Coins (значок в профиле)!"
-            win_index = 5 # Coins
+            win_index = 5
         else:
             result = "Пусто. В следующий раз повезет!"
-            win_index = 1 # Пусто
+            win_index = 1
             
         cursor.execute("INSERT OR REPLACE INTO user_spins (steam_id, last_spin) VALUES (?, CURRENT_TIMESTAMP)", (session['steam_id'],))
         conn.commit()
         
     conn.close()
     return render_template('wheel.html', is_premium=is_premium, result=result, win_index=win_index)
+
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_login():
     error = None
@@ -823,7 +929,6 @@ def admin_panel():
             except Exception as e:
                 error = f"Ошибка: {e}"
     
-    # Получаем список всех, у кого есть премиум
     cursor.execute("SELECT steam_id, activated_at FROM user_premium WHERE is_active = 1")
     premium_users = cursor.fetchall()
     conn.close()
@@ -834,5 +939,6 @@ def admin_panel():
 def admin_logout():
     session.pop('is_admin', None)
     return redirect(url_for('index'))
+
 if __name__ == '__main__':
     app.run(debug=True)

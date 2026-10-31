@@ -310,7 +310,7 @@ PRO_PLAYERS_DATA = [
     {"name": "Saksa", "team": "Team Yandex", "role": 4, "account_id": 103735745, "liquipedia": "https://liquipedia.net/dota2/Saksa", "dotabuff": "https://www.dotabuff.com/players/103735745"},
     {"name": "Maladych", "team": "Team Yandex", "role": 5, "account_id": 93817671, "liquipedia": "https://liquipedia.net/dota2/Maladych", "dotabuff": "https://www.dotabuff.com/players/93817671"},
     {"name": "Darklord^", "team": "LEGION", "role": 1, "account_id": 879017980, "liquipedia": "https://liquipedia.net/dota2/Darklord", "dotabuff": "https://www.dotabuff.com/players/879017980"},
-    {"name": "Stojkov", "team": "LEGION", "role": 2, "account_id": 262476000, "liquipedia": "https://liquipedia.net/dota2/Stojkov", "dotabuff": "https://www.dotabuff.com/players/262476000"},
+        {"name": "Stojkov", "team": "LEGION", "role": 2, "account_id": 262476000, "liquipedia": "https://liquipedia.net/dota2/Stojkov", "dotabuff": "https://www.dotabuff.com/players/262476000"},
     {"name": "SaberLight", "team": "LEGION", "role": 3, "account_id": 126212866, "liquipedia": "https://liquipedia.net/dota2/SaberLight", "dotabuff": "https://www.dotabuff.com/players/126212866"},
     {"name": "Xsvampire", "team": "LEGION", "role": 4, "account_id": 326327879, "liquipedia": "https://liquipedia.net/dota2/Xsvampire", "dotabuff": "https://www.dotabuff.com/players/326327879"},
     {"name": "Kidaro", "team": "LEGION", "role": 5, "account_id": 104334048, "liquipedia": "https://liquipedia.net/dota2/Kidaro", "dotabuff": "https://www.dotabuff.com/players/104334048"}
@@ -654,20 +654,15 @@ def psy_chat():
         return redirect(url_for('psy_chat'))
     return render_template('psy.html', history=session.get('psy_history', []))
 
-# ==========================================
-# ИСПРАВЛЕННЫЙ ТОП ИГРОКОВ (GPM)
-# ==========================================
 @app.route('/leaderboard_players')
 def leaderboard_players():
     conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
     cursor = conn.cursor()
     
-    # Проверяем кэш
     cursor.execute('SELECT data, updated_at FROM leaderboard_cache WHERE id = 1')
     row = cursor.fetchone()
     current_time = time.time()
     
-    # Если данные моложе 15 минут — отдаем их
     if row and (current_time - row[1] < 900):
         conn.close()
         return render_template('leaderboard_players.html', top_players=json.loads(row[0]))
@@ -678,14 +673,12 @@ def leaderboard_players():
         headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
         q = "query GetPlayerLastMatch($steamId: Long!) { player(steamAccountId: $steamId) { matches(request: { take: 1 }) { players { steamAccountId heroId goldPerMinute } } } }"
         
-        # Ограничиваем пул игроков (например, первыми 20), чтобы не долбить API 50 раз
         for player in PRO_PLAYERS_DATA[:20]:
             acc_id = player.get('account_id')
             if not acc_id: continue
             try:
-                # Таймаут 3 секунды, чтобы страница не висела вечно
                 r = requests.post(url, headers=headers, json={"query": q, "variables": {"steamId": int(acc_id)}}, timeout=3, verify=False)
-                                if r.status_code == 200:
+                if r.status_code == 200:
                     data = r.json()
                     if "errors" not in data:
                         p_data = data.get("data", {}).get("player")
@@ -709,7 +702,6 @@ def leaderboard_players():
                 
     top_players = sorted(top_players, key=lambda x: x['gpm'], reverse=True)[:10]
     
-    # Сохраняем в кэш только если реально что-то нашли
     if top_players:
         cursor.execute('DELETE FROM leaderboard_cache')
         cursor.execute('INSERT INTO leaderboard_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(top_players), current_time))
@@ -718,9 +710,6 @@ def leaderboard_players():
     conn.close()
     return render_template('leaderboard_players.html', top_players=top_players)
 
-# ==========================================
-# ИСПРАВЛЕННАЯ ИГРА "УГАДАЙ ВИНРЕЙТ"
-# ==========================================
 @app.route('/guess', methods=['GET', 'POST'])
 def guess():
     # Инициализация сессии
@@ -735,12 +724,10 @@ def guess():
 
         # Начало игры / следующий раунд
         if action == 'start':
-            # Получаем топ героев для пула (или просто всех, если API недоступен)
             pool = get_top_heroes_for_hero_of_day()
             if not pool:
                 pool = list(HEROES.keys())
 
-            # Выбираем случайного героя, у которого есть винрейт
             hero_found = False
             attempts = 0
             while not hero_found and attempts < 10:
@@ -753,7 +740,6 @@ def guess():
                     session['guess_hero_winrate'] = hero_info['calculated_winrate']
                     hero_found = True
 
-            # Фолбэк, если API вообще не отвечает (берем любого и ставим рандомный винрейт)
             if not hero_found:
                 h_id = random.choice(list(HEROES.keys()))
                 local_name = HEROES.get(str(h_id), {}).get('localized_name', 'Unknown')
@@ -765,20 +751,22 @@ def guess():
 
         # Ответ пользователя
         elif action == 'guess':
-            user_guess = request.form.get('guess') # 'high' или 'low'
+            user_guess = request.form.get('guess')
             actual_winrate = session.get('guess_hero_winrate', 50.0)
             hero_data = session.get('guess_hero')
 
             if hero_data and actual_winrate is not None:
                 session['guess_total'] += 1
+                is_correct = False
                 if user_guess == 'high' and actual_winrate > 50.0:
                     session['guess_score'] += 1
+                    is_correct = True
                 elif user_guess == 'low' and actual_winrate < 50.0:
                     session['guess_score'] += 1
+                    is_correct = True
 
-                # Можно вывести сообщение с результатом (правильно/неправильно)
                 session['guess_last_result'] = {
-                    "correct": (user_guess == 'high' and actual_winrate > 50.0) or (user_guess == 'low' and actual_winrate < 50.0),
+                    "correct": is_correct,
                     "actual_winrate": actual_winrate,
                     "user_guess": user_guess,
                     "hero_name": hero_data['name']
@@ -795,7 +783,6 @@ def guess():
             while not hero_found and attempts < 10:
                 attempts += 1
                 h_id = random.choice(pool)
-                # Проверяем, чтобы не попался тот же герой
                 if session.get('guess_hero') and int(session['guess_hero']['id']) == int(h_id):
                     continue
                 hero_info = get_hero_info(h_id)
@@ -814,11 +801,10 @@ def guess():
             session.modified = True
             return redirect(url_for('guess'))
 
-    # Рендерим страницу
     hero = session.get('guess_hero')
     score = session.get('guess_score', 0)
     total = session.get('guess_total', 0)
-    last_result = session.pop('guess_last_result', None) # Всплывающее сообщение
+    last_result = session.pop('guess_last_result', None)
     
     return render_template('guess.html', hero=hero, score=score, total=total, last_result=last_result)
 

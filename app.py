@@ -990,6 +990,13 @@ def admin_panel():
 def admin_logout():
     session.pop('is_admin', None)
     return redirect(url_for('index'))
+@app.route('/sitemap.xml')
+def sitemap():
+    return send_from_directory(app.static_folder, 'sitemap.xml')
+
+@app.route('/robots.txt')
+def robots():
+    return send_from_directory(app.static_folder, 'robots.txt')
 
 if __name__ == '__main__':
     app.run(debug=True)

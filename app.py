@@ -469,9 +469,34 @@ def my_profile():
 @app.route('/', methods=['GET', 'POST'])
 def index():
     analysis, error, analyzed_match_id, players_data, items_data = None, None, None, [], {}
-        # ПРОВЕРКА ЛИМИТОВ
+            # ПРОВЕРКА ЛИМИТОВ
     is_premium = False
-    if 'steam_id' in session:
+    
+    # 1. Проверяем, залогинен ли пользователь
+    if 'steam_id' not in session:
+        # Лимит для анонимов по IP
+        user_ip = request.remote_addr
+        today = datetime.date.today().strftime("%Y-%m-%d")
+        
+        conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
+        cursor = conn.cursor()
+        # Ищем запись для этого IP за сегодня
+        cursor.execute("SELECT count FROM user_requests WHERE steam_id = ? AND request_date = ?", (user_ip, today))
+        req_row = cursor.fetchone()
+        req_count = req_row[0] if req_row else 0
+        
+        if request.method == 'POST':
+            if req_count >= 3:
+                error = "Вы исчерпали бесплатный пробный анализ. Войдите через Steam, чтобы получить еще 5 бесплатных разборов!"
+                conn.close()
+                return render_template('index.html', analysis=None, error=error, analyzed_match_id=None, players=[], pro_players=enrich_pro_players_with_avatars(PRO_PLAYERS_DATA.copy()), donate_url="https://www.donationalerts.com/r/asod888", chart_labels=[], chart_values=[], networth_labels=[], networth_values=[], hero_of_day=None, hero_of_day_stats=None, is_logged_in=False, user_avatar=None, user_name=None, items_data={})
+            else:
+                cursor.execute("INSERT INTO user_requests (steam_id, request_date, count) VALUES (?, ?, 1) ON CONFLICT(steam_id, request_date) DO UPDATE SET count = count + 1", (user_ip, today))
+                conn.commit()
+        conn.close()
+        
+    else:
+        # 2. Если залогинен — проверяем Премиум и лимит 5/день
         conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
         cursor = conn.cursor()
         cursor.execute("SELECT is_active FROM user_premium WHERE steam_id = ?", (session['steam_id'],))
@@ -479,7 +504,6 @@ def index():
         if row and row[0] == 1:
             is_premium = True
             
-        # Если это POST запрос (нажал "Анализировать") и человек не премиум
         if request.method == 'POST' and not is_premium:
             today = datetime.date.today().strftime("%Y-%m-%d")
             cursor.execute("SELECT count FROM user_requests WHERE steam_id = ? AND request_date = ?", (session['steam_id'], today))
@@ -489,10 +513,8 @@ def index():
             if req_count >= 5:
                 error = "Дневной лимит анализов (5) исчерпан. Купите Премиум для безлимита!"
                 conn.close()
-                # Возвращаем страницу с ошибкой, не выполняя анализ
                 return render_template('index.html', analysis=None, error=error, analyzed_match_id=None, players=[], pro_players=enrich_pro_players_with_avatars(PRO_PLAYERS_DATA.copy()), donate_url="https://www.donationalerts.com/r/asod888", chart_labels=[], chart_values=[], networth_labels=[], networth_values=[], hero_of_day=None, hero_of_day_stats=None, is_logged_in=True, user_avatar=None, user_name=None, items_data={})
             else:
-                # Записываем новый запрос
                 cursor.execute("INSERT INTO user_requests (steam_id, request_date, count) VALUES (?, ?, 1) ON CONFLICT(steam_id, request_date) DO UPDATE SET count = count + 1", (session['steam_id'], today))
                 conn.commit()
         conn.close()

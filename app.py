@@ -22,6 +22,7 @@ def init_db():
     c.execute('CREATE TABLE IF NOT EXISTS user_premium (steam_id TEXT PRIMARY KEY, is_active INTEGER DEFAULT 0, activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
     c.execute('CREATE TABLE IF NOT EXISTS user_spins (steam_id TEXT PRIMARY KEY, last_spin TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
     c.execute('CREATE TABLE IF NOT EXISTS leaderboard_cache (id INTEGER PRIMARY KEY, data TEXT, updated_at REAL)')
+    c.execute('CREATE TABLE IF NOT EXISTS user_requests (steam_id TEXT, request_date TEXT, count INTEGER DEFAULT 0, PRIMARY KEY (steam_id, request_date))')
     conn.commit(); conn.close()
 init_db()
 
@@ -56,17 +57,26 @@ def get_gigachat_token():
         return r.json().get("access_token")
     except: return None
 
-def analyze_with_gigachat(prompt_text):
+def analyze_with_gigachat(prompt_text, is_premium=False):
     if not GIGACHAT_AUTH_KEY: return "Ошибка: Нет ключа GigaChat."
     token = get_gigachat_token()
     if not token: return "Ошибка: Не удалось получить токен GigaChat."
     url = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-    sp = "Ты — профессиональный киберспортивный аналитик Dota 2. Твоя задача — сделать разбор на основе данных. Если тебя просят проанализировать ДРАФТ, НЕ ПИШИ про предметы и закуп, говори только про героев и синергию. ЗАПРЕЩЕНО гадать, кто на какой линии стоял! Пиши обычным текстом, без звездочек. Используй абзацы. Отвечай на русском."
-    data = {"model": "GigaChat", "messages": [{"role": "system", "content": sp}, {"role": "user", "content": prompt_text}], "temperature": 0.3, "max_tokens": 3000, "stream": False}
+    
+    # Если премиум — просим написать подробнее и даем больше токенов
+    if is_premium:
+        sp = "Ты — профессиональный киберспортивный аналитик Dota 2. Твоя задача — сделать МАКСИМАЛЬНО ПОДРОБНЫЙ и ГЛУБОКИЙ разбор на основе данных. Если тебя просят проанализировать ДРАФТ, НЕ ПИШИ про предметы и закуп. ЗАПРЕЩЕНО гадать, кто на какой линии стоял! Пиши обычным текстом, без звездочек. Используй абзацы. Отвечай на русском."
+        max_tokens = 6000
+    else:
+        sp = "Ты — профессиональный киберспортивный аналитик Dota 2. Твоя задача — сделать разбор на основе данных. Если тебя просят проанализировать ДРАФТ, НЕ ПИШИ про предметы и закуп. ЗАПРЕЩЕНО гадать, кто на какой линии стоял! Пиши обычным текстом, без звездочек. Используй абзацы. Отвечай на русском."
+        max_tokens = 3000
+
+    data = {"model": "GigaChat", "messages": [{"role": "system", "content": sp}, {"role": "user", "content": prompt_text}], "temperature": 0.3, "max_tokens": max_tokens, "stream": False}
+    
     for _ in range(3):
         try:
-            response = requests.post(url, headers=headers, json=data, timeout=45, verify=False)
+            response = requests.post(url, headers=headers, json=data, timeout=60, verify=False) # Увеличили таймаут для длинных текстов
             if response.status_code == 429: time.sleep(2); continue
             response.raise_for_status()
             raw_text = response.json()['choices'][0]['message']['content']
@@ -459,6 +469,33 @@ def my_profile():
 @app.route('/', methods=['GET', 'POST'])
 def index():
     analysis, error, analyzed_match_id, players_data, items_data = None, None, None, [], {}
+        # ПРОВЕРКА ЛИМИТОВ
+    is_premium = False
+    if 'steam_id' in session:
+        conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
+        cursor = conn.cursor()
+        cursor.execute("SELECT is_active FROM user_premium WHERE steam_id = ?", (session['steam_id'],))
+        row = cursor.fetchone()
+        if row and row[0] == 1:
+            is_premium = True
+            
+        # Если это POST запрос (нажал "Анализировать") и человек не премиум
+        if request.method == 'POST' and not is_premium:
+            today = datetime.date.today().strftime("%Y-%m-%d")
+            cursor.execute("SELECT count FROM user_requests WHERE steam_id = ? AND request_date = ?", (session['steam_id'], today))
+            req_row = cursor.fetchone()
+            req_count = req_row[0] if req_row else 0
+            
+            if req_count >= 5:
+                error = "Дневной лимит анализов (5) исчерпан. Купите Премиум для безлимита!"
+                conn.close()
+                # Возвращаем страницу с ошибкой, не выполняя анализ
+                return render_template('index.html', analysis=None, error=error, analyzed_match_id=None, players=[], pro_players=enrich_pro_players_with_avatars(PRO_PLAYERS_DATA.copy()), donate_url="https://www.donationalerts.com/r/asod888", chart_labels=[], chart_values=[], networth_labels=[], networth_values=[], hero_of_day=None, hero_of_day_stats=None, is_logged_in=True, user_avatar=None, user_name=None, items_data={})
+            else:
+                # Записываем новый запрос
+                cursor.execute("INSERT INTO user_requests (steam_id, request_date, count) VALUES (?, ?, 1) ON CONFLICT(steam_id, request_date) DO UPDATE SET count = count + 1", (session['steam_id'], today))
+                conn.commit()
+        conn.close()
     chart_labels, chart_values, networth_labels, networth_values = [], [], [], []
     today_seed = int(datetime.date.today().strftime("%Y%m%d"))
     random.seed(today_seed)
@@ -476,7 +513,7 @@ def index():
             if err: error = err
             else:
                 analyzed_match_id = match_id
-                analysis = analyze_with_gigachat(build_ai_prompt(match_data, match_id))
+                analysis = analyze_with_gigachat(build_ai_prompt(match_data, match_id), is_premium=is_premium)
                 items_data = get_items_from_stratz(match_id)
                 for p in match_data.get('players', []):
                     h_id = p.get('hero_id'); h_info = HEROES.get(str(h_id), {}); h_name = h_info.get('localized_name', f"Герой {h_id}")
@@ -743,6 +780,33 @@ def fantasy_leaderboard():
 @app.route('/coach', methods=['GET', 'POST'])
 def coach():
     ai_feedback = None; error = None; searched_id = None
+        # ПРОВЕРКА ЛИМИТОВ
+    is_premium = False
+    if 'steam_id' in session:
+        conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
+        cursor = conn.cursor()
+        cursor.execute("SELECT is_active FROM user_premium WHERE steam_id = ?", (session['steam_id'],))
+        row = cursor.fetchone()
+        if row and row[0] == 1:
+            is_premium = True
+            
+        # Если это POST запрос (нажал "Анализировать") и человек не премиум
+        if request.method == 'POST' and not is_premium:
+            today = datetime.date.today().strftime("%Y-%m-%d")
+            cursor.execute("SELECT count FROM user_requests WHERE steam_id = ? AND request_date = ?", (session['steam_id'], today))
+            req_row = cursor.fetchone()
+            req_count = req_row[0] if req_row else 0
+            
+            if req_count >= 5:
+                error = "Дневной лимит анализов (5) исчерпан. Купите Премиум для безлимита!"
+                conn.close()
+                # Возвращаем страницу с ошибкой, не выполняя анализ
+                return render_template('index.html', analysis=None, error=error, analyzed_match_id=None, players=[], pro_players=enrich_pro_players_with_avatars(PRO_PLAYERS_DATA.copy()), donate_url="https://www.donationalerts.com/r/asod888", chart_labels=[], chart_values=[], networth_labels=[], networth_values=[], hero_of_day=None, hero_of_day_stats=None, is_logged_in=True, user_avatar=None, user_name=None, items_data={})
+            else:
+                # Записываем новый запрос
+                cursor.execute("INSERT INTO user_requests (steam_id, request_date, count) VALUES (?, ?, 1) ON CONFLICT(steam_id, request_date) DO UPDATE SET count = count + 1", (session['steam_id'], today))
+                conn.commit()
+        conn.close()
     if request.method == 'POST':
         steam_id_input = request.form.get('steam_id', '').strip() or session.get('steam_id')
         if not steam_id_input: error = "Введите Steam ID."

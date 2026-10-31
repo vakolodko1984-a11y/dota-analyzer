@@ -80,7 +80,8 @@ def get_items_from_stratz(m_id):
     headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
     q = "query GetMatchItems($matchId: Long!) { match(id: $matchId) { players { isRadiant item0 item1 item2 item3 item4 item5 } } }"
     try:
-        r = requests.post(url, headers=headers, json={"query": q, "variables": {"matchId": int(m_id)}}, timeout=20, verify=False)
+        # Уменьшили таймаут до 10 секунд, чтобы не вешало сайт
+        r = requests.post(url, headers=headers, json={"query": q, "variables": {"matchId": int(m_id)}}, timeout=10, verify=False)
         if r.status_code == 200:
             data = r.json()
             if "errors" in data: return {}
@@ -91,26 +92,55 @@ def get_items_from_stratz(m_id):
                 slot = idx if p.get("isRadiant") else (128 + (idx - 5))
                 items[slot] = [p.get(f'item{i}', 0) for i in range(6) if p.get(f'item{i}', 0) != 0]
             return items
-    except: pass
+    except: 
+        pass
     return {}
 
 def get_match_from_stratz(m_id):
-    if not STRATZ_API_TOKEN or not m_id.isdigit(): return None, "Ошибка токена или ID."
-    url = "https://api.stratz.com/graphql"
-    headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-    q = "query GetMatch($matchId: Long!) { match(id: $matchId) { didRadiantWin durationSeconds radiantNetworthLeads players { isRadiant heroId kills deaths assists goldPerMinute experiencePerMinute heroDamage towerDamage heroHealing } } }"
+    if not m_id.isdigit(): return None, "Ошибка ID."
+    
+    # 1. Пытаемся через STRATZ
+    if STRATZ_API_TOKEN:
+        url = "https://api.stratz.com/graphql"
+        headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
+        q = "query GetMatch($matchId: Long!) { match(id: $matchId) { didRadiantWin durationSeconds radiantNetworthLeads players { isRadiant heroId kills deaths assists goldPerMinute experiencePerMinute heroDamage towerDamage heroHealing } } }"
+        try:
+            r = requests.post(url, headers=headers, json={"query": q, "variables": {"matchId": int(m_id)}}, timeout=15, verify=False)
+            if r.status_code == 200:
+                data = r.json()
+                if "errors" not in data:
+                    match = data.get("data", {}).get("match")
+                    if match:
+                        adapted = {"radiant_win": match["didRadiantWin"], "duration": match["durationSeconds"], "radiant_networth_leads": match.get("radiantNetworthLeads") or [], "players": []}
+                        for p in match["players"]:
+                            adapted["players"].append({"isRadiant": p.get("isRadiant", True), "hero_id": p["heroId"], "kills": p["kills"], "deaths": p["deaths"], "assists": p["assists"], "gold_per_min": p["goldPerMinute"], "xp_per_min": p["experiencePerMinute"], "hero_damage": p["heroDamage"], "tower_damage": p["towerDamage"], "hero_healing": p["heroHealing"]})
+                        return adapted, None
+        except: pass
+
+    # 2. Если STRATZ лег или дал 403 — идем в OpenDota
     try:
-        r = requests.post(url, headers=headers, json={"query": q, "variables": {"matchId": int(m_id)}}, timeout=20, verify=False)
-        if r.status_code != 200: return None, f"Ошибка STRATZ: {r.status_code}"
-        data = r.json()
-        if "errors" in data: return None, f"Ошибка GraphQL: {data['errors'][0].get('message')}"
-        match = data.get("data", {}).get("match")
-        if not match: return None, "Матч не найден."
-        adapted = {"radiant_win": match["didRadiantWin"], "duration": match["durationSeconds"], "radiant_networth_leads": match.get("radiantNetworthLeads") or [], "players": []}
-        for p in match["players"]:
-            adapted["players"].append({"isRadiant": p.get("isRadiant", True), "hero_id": p["heroId"], "kills": p["kills"], "deaths": p["deaths"], "assists": p["assists"], "gold_per_min": p["goldPerMinute"], "xp_per_min": p["experiencePerMinute"], "hero_damage": p["heroDamage"], "tower_damage": p["towerDamage"], "hero_healing": p["heroHealing"], "death_timings": []})
-        return adapted, None
-    except Exception as e: return None, f"Ошибка сети: {str(e)}"
+        r = requests.get(f"https://api.opendota.com/api/matches/{m_id}", timeout=15)
+        if r.status_code == 200:
+            data = r.json()
+            match = {"radiant_win": data.get("radiant_win", False), "duration": data.get("duration", 0), "radiant_networth_leads": data.get("radiant_gold_adv") or [], "players": []}
+            for p in data.get("players", []):
+                match["players"].append({
+                    "isRadiant": p.get("isRadiant", True),
+                    "hero_id": p.get("hero_id", 0),
+                    "kills": p.get("kills", 0),
+                    "deaths": p.get("deaths", 0),
+                    "assists": p.get("assists", 0),
+                    "gold_per_min": p.get("gold_per_min", 0),
+                    "xp_per_min": p.get("xp_per_min", 0),
+                    "hero_damage": p.get("hero_damage", 0),
+                    "tower_damage": p.get("tower_damage", 0),
+                    "hero_healing": p.get("hero_healing", 0)
+                })
+            return match, None
+    except Exception as e:
+        return None, f"Ошибка OpenDota: {str(e)}"
+
+    return None, "Не удалось получить данные ни от STRATZ, ни от OpenDota."
 
 def build_ai_prompt(m_data, m_id):
     w = "Radiant (Свет)" if m_data.get('radiant_win') else "Dire (Тьма)"

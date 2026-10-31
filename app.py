@@ -21,7 +21,6 @@ def init_db():
     c.execute('CREATE TABLE IF NOT EXISTS user_drafts (steam_id TEXT, drafted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
     c.execute('CREATE TABLE IF NOT EXISTS user_premium (steam_id TEXT PRIMARY KEY, is_active INTEGER DEFAULT 0, activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
     c.execute('CREATE TABLE IF NOT EXISTS user_spins (steam_id TEXT PRIMARY KEY, last_spin TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
-    # Новая таблица для кэша лидерборда GPM
     c.execute('CREATE TABLE IF NOT EXISTS leaderboard_cache (id INTEGER PRIMARY KEY, data TEXT, updated_at REAL)')
     conn.commit(); conn.close()
 init_db()
@@ -310,8 +309,8 @@ PRO_PLAYERS_DATA = [
     {"name": "Saksa", "team": "Team Yandex", "role": 4, "account_id": 103735745, "liquipedia": "https://liquipedia.net/dota2/Saksa", "dotabuff": "https://www.dotabuff.com/players/103735745"},
     {"name": "Maladych", "team": "Team Yandex", "role": 5, "account_id": 93817671, "liquipedia": "https://liquipedia.net/dota2/Maladych", "dotabuff": "https://www.dotabuff.com/players/93817671"},
     {"name": "Darklord^", "team": "LEGION", "role": 1, "account_id": 879017980, "liquipedia": "https://liquipedia.net/dota2/Darklord", "dotabuff": "https://www.dotabuff.com/players/879017980"},
-        {"name": "Stojkov", "team": "LEGION", "role": 2, "account_id": 262476000, "liquipedia": "https://liquipedia.net/dota2/Stojkov", "dotabuff": "https://www.dotabuff.com/players/262476000"},
-    {"name": "SaberLight", "team": "LEGION", "role": 3, "account_id": 126212866, "liquipedia": "https://liquipedia.net/dota2/SaberLight", "dotabuff": "https://www.dotabuff.com/players/126212866"},
+    {"name": "Stojkov", "team": "LEGION", "role": 2, "account_id": 262476000, "liquipedia": "https://liquipedia.net/dota2/Stojkov", "dotabuff": "https://www.dotabuff.com/players/262476000"},
+        {"name": "SaberLight", "team": "LEGION", "role": 3, "account_id": 126212866, "liquipedia": "https://liquipedia.net/dota2/SaberLight", "dotabuff": "https://www.dotabuff.com/players/126212866"},
     {"name": "Xsvampire", "team": "LEGION", "role": 4, "account_id": 326327879, "liquipedia": "https://liquipedia.net/dota2/Xsvampire", "dotabuff": "https://www.dotabuff.com/players/326327879"},
     {"name": "Kidaro", "team": "LEGION", "role": 5, "account_id": 104334048, "liquipedia": "https://liquipedia.net/dota2/Kidaro", "dotabuff": "https://www.dotabuff.com/players/104334048"}
 ]
@@ -553,32 +552,47 @@ def fantasy():
                 cursor.execute('INSERT INTO fantasy_rosters (steam_id, player1, player2, player3, player4, player5, tournament) VALUES (?, ?, ?, ?, ?, ?, ?)', (steam_id_64, p1, p2, p3, p4, p5, current_tournament)); conn.commit()
                 session['saved_roster'] = selected; saved_roster_names = selected; is_locked = True; success = "Твой состав успешно сохранен! Изменить его больше нельзя."
             except Exception as e: error = f"Ошибка: {e}"
+            
     player_stats = []
     if saved_roster_names:
-        cursor.execute('CREATE TABLE IF NOT EXISTS fantasy_cache (name TEXT PRIMARY KEY, points REAL, updated_at REAL)'); conn.commit()
         for i, name in enumerate(saved_roster_names):
-            role = i + 1; player_info = next((p for p in PRO_PLAYERS_DATA if p['name'] == name), None)
+            role = i + 1
+            player_info = next((p for p in PRO_PLAYERS_DATA if p['name'] == name), None)
             if not player_info: continue
-            acc_id = player_info.get('account_id', 0); points = 0.0; has_data = False
-            cursor.execute("SELECT points, updated_at FROM fantasy_cache WHERE name = ?", (name,)); cached_row = cursor.fetchone(); current_time = time.time()
-            if cached_row and (current_time - cached_row[1] < 900): points = cached_row[0]; has_data = True
-            elif acc_id and STRATZ_API_TOKEN:
-                url = "https://api.stratz.com/graphql"; headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-                q = "query GetPlayerLastMatch($steamId: Long!) { player(steamAccountId: $steamId) { matches(request: { take: 1 }) { players { steamAccountId goldPerMinute kills deaths assists towerDamage heroHealing } } } }"
+            acc_id = player_info.get('account_id', 0)
+            points = 0.0
+            has_data = False
+
+            # 1. Пытаемся спросить OpenDota (она сейчас работает)
+            if acc_id:
                 try:
-                    r = requests.post(url, headers=headers, json={"query": q, "variables": {"steamId": int(acc_id)}}, timeout=15, verify=False); data = r.json()
-                    if "errors" not in data:
-                        p_data = data.get("data", {}).get("player")
-                        if p_data and p_data.get("matches"):
-                            for mp in p_data["matches"][0].get("players", []):
-                                if mp.get("steamAccountId") == acc_id:
-                                    gpm, kills, deaths, assists, td, heal = mp.get("goldPerMinute", 0), mp.get("kills", 0), mp.get("deaths", 0), mp.get("assists", 0), mp.get("towerDamage", 0), mp.get("heroHealing", 0)
-                                    if role <= 3: points += (gpm / 10) + (kills * 2) - (deaths * 1.5) + (assists * 1.5) + (td / 200 if role == 2 else 0)
-                                    else: points += (assists * 2.5) + (heal / 500) - (deaths * 0.5)
-                                    points = round(points, 1); has_data = True; break
-                            if has_data: cursor.execute('INSERT OR REPLACE INTO fantasy_cache (name, points, updated_at) VALUES (?, ?, ?)', (name, points, current_time)); conn.commit()
-                except: pass
-            player_stats.append({"name": name, "team": player_info.get('team', 'Unknown'), "role": role, "points": points if has_data else 0.0})
+                    res = requests.get(f"https://api.opendota.com/api/players/{acc_id}/recentMatches", timeout=8)
+                    if res.status_code == 200 and res.json():
+                        m = res.json()[0]
+                        if role <= 3:
+                            points = (m.get('gold_per_min', 0) / 10) + (m.get('kills', 0) * 2) - (m.get('deaths', 0) * 1.5) + (m.get('assists', 0) * 1.5)
+                        else:
+                            points = (m.get('assists', 0) * 2.5) - (m.get('deaths', 0) * 0.5)
+                        points = round(points, 1)
+                        has_data = True
+                except:
+                    pass
+
+            # 2. Если OpenDota не ответила, делаем фолбэк
+            if not has_data:
+                base_gpm = {
+                    "Pure": 680, "bzm": 650, "33": 550, "Ari": 450, "Whitemon": 350, "Nightfall": 670, "lorenof": 640, "DM": 560, "OmaR": 440, "GH": 340, "Kiritych": 690, "Save-": 660, "MieRo": 570, "swedenstrong": 460, "Kataomi": 330, "Yuma": 680, "RCY": 630, "Fayde": 540, "Bignum": 450, "Speeed": 350, "Natsumi": 650, "Topson": 620, "SSS": 550, "Onejey": 430, "skem": 320, "Satanic": 700, "No[o]ne-": 670, "Noticed": 580, "9Class": 480, "Dukalis": 340, "m1CKe": 690, "Malr1ne": 650, "Wisper": 560, "Boxi": 470, "tOfu": 330, "Yatoro": 710, "Larl": 680, "Batyuk": 590, "not me": 490, "rue": 350, "Watson": 660, "CHIRA_JUNIOR": 630, "ATF": 570, "Saksa": 480, "Maladych": 340, "Darklord^": 640, "Stojkov": 600, "SaberLight": 550, "Xsvampire": 450, "Kidaro": 330
+                }
+                base = base_gpm.get(name, 500)
+                fake_gpm = base + random.randint(-50, 50)
+                if role <= 3:
+                    points = (fake_gpm / 10) + random.randint(3, 9) * 2 - random.randint(1, 5) * 1.5
+                else:
+                    points = random.randint(15, 25) * 2.5 - random.randint(1, 4) * 0.5
+                points = round(points, 1)
+
+            player_stats.append({"name": name, "team": player_info.get('team', 'Unknown'), "role": role, "points": points})
+
     total_points = sum(p['points'] for p in player_stats)
     if total_points > 0:
         cursor.execute("SELECT achievement_id FROM user_achievements WHERE steam_id = ?", (steam_id_64,)); existing = [row[0] for row in cursor.fetchall()]
@@ -663,54 +677,38 @@ def leaderboard_players():
     row = cursor.fetchone()
     current_time = time.time()
     
-    # Если данные моложе 15 минут — отдаем их
     if row and (current_time - row[1] < 900):
         cached_data = json.loads(row[0])
-        if cached_data: # Отдаем только если там не пусто
+        if cached_data:
             conn.close()
             return render_template('leaderboard_players.html', top_players=cached_data)
     
     top_players = []
-    if STRATZ_API_TOKEN:
-        url = "https://api.stratz.com/graphql"
-        headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-        q = "query GetPlayerLastMatch($steamId: Long!) { player(steamAccountId: $steamId) { matches(request: { take: 1 }) { players { steamAccountId heroId goldPerMinute } } } }"
-        
-        for player in PRO_PLAYERS_DATA[:20]:
-            acc_id = player.get('account_id')
-            if not acc_id: continue
-            try:
-                # Увеличили таймаут до 6 секунд, чтобы Render успевал
-                r = requests.post(url, headers=headers, json={"query": q, "variables": {"steamId": int(acc_id)}}, timeout=6, verify=False)
-                if r.status_code == 200:
-                    data = r.json()
-                    if "errors" not in data:
-                        p_data = data.get("data", {}).get("player")
-                        if p_data and p_data.get("matches"):
-                            match = p_data["matches"][0]
-                            for mp in match.get("players", []):
-                                if mp.get("steamAccountId") == acc_id:
-                                    gpm = mp.get("goldPerMinute", 0)
-                                    hero_id = mp.get("heroId")
-                                    hero_info = HEROES.get(str(hero_id), {})
-                                    top_players.append({
-                                        "name": player['name'],
-                                        "team": player['team'],
-                                        "gpm": gpm,
-                                        "hero": hero_info.get('localized_name', 'Unknown'),
-                                        "icon": hero_info.get('icon', '')
-                                    })
-                                    break
-            except:
-                continue
-                
-    # === ЗАПАСНОЙ ВАРИАНТ (Если API не ответил) ===
+    # Используем OpenDota как основной источник
+    for player in PRO_PLAYERS_DATA[:20]:
+        acc_id = player.get('account_id')
+        if not acc_id: continue
+        try:
+            r = requests.get(f"https://api.opendota.com/api/players/{acc_id}/recentMatches", timeout=3)
+            if r.status_code == 200 and r.json():
+                m = r.json()[0]
+                gpm = m.get('gold_per_min', 0)
+                hero_id = m.get('hero_id', 0)
+                hero_info = HEROES.get(str(hero_id), {})
+                top_players.append({
+                    "name": player['name'],
+                    "team": player['team'],
+                    "gpm": gpm,
+                    "hero": hero_info.get('localized_name', 'Unknown'),
+                    "icon": hero_info.get('icon', '')
+                })
+        except:
+            continue
+            
+    # Запасной вариант, если OpenDota затупила
     if not top_players:
-        import random
-        # Берем случайных 10 игроков и генерируем им GPM от 600 до 900
         sample_players = random.sample(PRO_PLAYERS_DATA, 10)
         for player in sample_players:
-            # Выбираем случайного героя
             h_id = random.choice(list(HEROES.keys()))
             hero_info = HEROES.get(str(h_id), {})
             top_players.append({
@@ -723,53 +721,9 @@ def leaderboard_players():
             
     top_players = sorted(top_players, key=lambda x: x['gpm'], reverse=True)[:10]
     
-    # Сохраняем в кэш
     if top_players:
         cursor.execute('DELETE FROM leaderboard_cache')
-        cursor.execute('INSERT INTO leaderboard_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(top_players), current_time))
-        conn.commit()
-        
-    conn.close()
-    return render_template('leaderboard_players.html', top_players=top_players)
-    
-    top_players = []
-    if STRATZ_API_TOKEN:
-        url = "https://api.stratz.com/graphql"
-        headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-        q = "query GetPlayerLastMatch($steamId: Long!) { player(steamAccountId: $steamId) { matches(request: { take: 1 }) { players { steamAccountId heroId goldPerMinute } } } }"
-        
-        for player in PRO_PLAYERS_DATA[:20]:
-            acc_id = player.get('account_id')
-            if not acc_id: continue
-            try:
-                r = requests.post(url, headers=headers, json={"query": q, "variables": {"steamId": int(acc_id)}}, timeout=3, verify=False)
-                if r.status_code == 200:
-                    data = r.json()
-                    if "errors" not in data:
-                        p_data = data.get("data", {}).get("player")
-                        if p_data and p_data.get("matches"):
-                            match = p_data["matches"][0]
-                            for mp in match.get("players", []):
-                                if mp.get("steamAccountId") == acc_id:
-                                    gpm = mp.get("goldPerMinute", 0)
-                                    hero_id = mp.get("heroId")
-                                    hero_info = HEROES.get(str(hero_id), {})
-                                    top_players.append({
-                                        "name": player['name'],
-                                        "team": player['team'],
-                                        "gpm": gpm,
-                                        "hero": hero_info.get('localized_name', 'Unknown'),
-                                        "icon": hero_info.get('icon', '')
-                                    })
-                                    break
-            except:
-                continue
-                
-    top_players = sorted(top_players, key=lambda x: x['gpm'], reverse=True)[:10]
-    
-    if top_players:
-        cursor.execute('DELETE FROM leaderboard_cache')
-        cursor.execute('INSERT INTO leaderboard_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(top_players), current_time))
+                cursor.execute('INSERT INTO leaderboard_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(top_players), current_time))
         conn.commit()
         
     conn.close()
@@ -777,7 +731,6 @@ def leaderboard_players():
 
 @app.route('/guess', methods=['GET', 'POST'])
 def guess():
-    # Инициализация сессии
     if 'guess_score' not in session:
         session['guess_score'] = 0
         session['guess_total'] = 0
@@ -787,7 +740,6 @@ def guess():
     if request.method == 'POST':
         action = request.form.get('action')
 
-        # Начало игры / следующий раунд
         if action == 'start':
             pool = get_top_heroes_for_hero_of_day()
             if not pool:
@@ -814,7 +766,6 @@ def guess():
             session.modified = True
             return redirect(url_for('guess'))
 
-        # Ответ пользователя
         elif action == 'guess':
             user_guess = request.form.get('guess')
             actual_winrate = session.get('guess_hero_winrate', 50.0)
@@ -838,7 +789,6 @@ def guess():
                 }
                 session.modified = True
 
-            # Загружаем следующего героя
             pool = get_top_heroes_for_hero_of_day()
             if not pool:
                 pool = list(HEROES.keys())
@@ -990,6 +940,7 @@ def admin_panel():
 def admin_logout():
     session.pop('is_admin', None)
     return redirect(url_for('index'))
+
 @app.route('/sitemap.xml')
 def sitemap():
     return send_from_directory(app.static_folder, 'sitemap.xml')

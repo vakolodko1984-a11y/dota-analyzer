@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<!-- Yandex.RTB -->
+<script>window.yaContextCb=window.yaContextCb||[]</script>
+<script src="https://yandex.ru/ads/system/context.js" async></script>    
 <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/png">    
 <meta name="google-site-verification" content="zLCp-9JRXPRhB32jQGcUGpjmRdv0k48Lk0nrh9TEhhI" />
 <meta name="yandex-verification" content="2659d3cb5d06edd1" />    
@@ -237,7 +240,16 @@
                 </div>
                 {% endif %}
             {% endif %}
-
+           <!-- Yandex.RTB R-A-20316598-1 -->
+<div id="yandex_rtb_R-A-20316598-1"></div>
+<script>
+window.yaContextCb.push(() => {
+    Ya.Context.AdvManager.render({
+        "blockId": "R-A-20316598-1",
+        "renderTo": "yandex_rtb_R-A-20316598-1"
+    })
+})
+</script>
             <div class="nav-links">
                 <a href="/draft" class="nav-btn">🛡️ Draft Helper</a>
                 <a href="/heroes" class="nav-btn">📖 Справочник</a>

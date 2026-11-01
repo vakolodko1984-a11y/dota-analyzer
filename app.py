@@ -672,8 +672,15 @@ def tournaments():
 def fantasy():
     steam_id_64 = session.get('steam_id')
     if not steam_id_64: return redirect(url_for('login_steam'))
-    current_tournament = "BLAST SLAM IX"; error, success = None, None
+    
+    current_tournament = "BLAST SLAM IX"
+    error, success = None, None
+    
+    # ВОТ ЭТА СТРОЧКА ( True, когда турнир начнется)
+    is_tournament_started = False 
+    
     conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db')); cursor = conn.cursor()
+    # ... остальной код ...
     valid_names = [p['name'] for p in PRO_PLAYERS_DATA]
     cursor.execute("SELECT id, player1, player2, player3, player4, player5 FROM fantasy_rosters WHERE steam_id = ? AND tournament = ?", (steam_id_64, current_tournament))
     db_row = cursor.fetchone(); db_roster = None

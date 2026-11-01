@@ -596,7 +596,7 @@ def pros(): return render_template('pros.html', pro_players=enrich_pro_players_w
 @app.route('/tournaments')
 def tournaments():
     return render_template('tournaments.html', tournaments=[
-        {"name": "PARI Universe", "dates": "22 октября — 1 ноября 2026", "location": "Онлайн (Европа)", "prize": "$250,000", "status": "Идёт сейчас", "description": "Турнир от FISSURE и PARI.", "link": "https://liquipedia.net/dota2/PARI_Universe/1"},
+        {"name": "PARI Universe", "dates": "22 октября — 1 ноября 2026", "location": "Онлайн (Европа)", "prize": "$250,000", "status": "Завершён", "description": "Турнир от FISSURE и PARI. Победитель - Team Spirit", "link": "https://liquipedia.net/dota2/PARI_Universe/1"},
         {"name": "ESL One Munich 2027", "dates": "4 — 11 апреля 2027", "location": "Мюнхен, Германия", "prize": "$1,000,000", "status": "Предстоящий", "description": "Крупный LAN-турнир от ESL.", "link": "https://liquipedia.net/dota2/ESL_One/Munich/2027"},
         {"name": "The International 2026", "dates": "13 — 23 августа 2026", "location": "Шанхай, Китай", "prize": "$1,600,000+", "status": "Завершён", "description": "Главный турнир года.", "link": "https://liquipedia.net/dota2/The_International/2026"}
     ])

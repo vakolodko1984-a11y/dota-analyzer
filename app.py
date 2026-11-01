@@ -23,8 +23,18 @@ def init_db():
     c.execute('CREATE TABLE IF NOT EXISTS user_spins (steam_id TEXT PRIMARY KEY, last_spin TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
     c.execute('CREATE TABLE IF NOT EXISTS leaderboard_cache (id INTEGER PRIMARY KEY, data TEXT, updated_at REAL)')
     c.execute('CREATE TABLE IF NOT EXISTS user_requests (steam_id TEXT, request_date TEXT, count INTEGER DEFAULT 0, PRIMARY KEY (steam_id, request_date))')
+    c.execute('CREATE TABLE IF NOT EXISTS fantasy_tournaments (tournament_name TEXT PRIMARY KEY, is_open INTEGER DEFAULT 1)')
     conn.commit(); conn.close()
 init_db()
+def is_tournament_open(tournament_name):
+    conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
+    cursor = conn.cursor()
+    cursor.execute("SELECT is_open FROM fantasy_tournaments WHERE tournament_name = ?", (tournament_name,))
+    row = cursor.fetchone()
+    conn.close()
+    if row is None:
+        return True # Если турнира нет в базе, считаем, что он открыт
+    return row[0] == 1
 
 def clean_env_var(v): return re.sub(r'[\s"\']', '', os.getenv(v, ""))
 STRATZ_API_TOKEN = clean_env_var("STRATZ_API_TOKEN")
@@ -768,15 +778,27 @@ def fantasy():
     if request.args.get('reset') == '1':
         if is_locked: return redirect(url_for('fantasy'))
         else: session.pop('saved_roster', None); return redirect(url_for('fantasy'))
+        
+    # Проверяем, открыт ли турнир
+    tournament_is_open = is_tournament_open(current_tournament)
+    
     if request.method == 'POST' and not is_locked:
-        p1, p2, p3, p4, p5 = request.form.get('role_1'), request.form.get('role_2'), request.form.get('role_3'), request.form.get('role_4'), request.form.get('role_5')
-        selected = [p1, p2, p3, p4, p5]
-        if not all(selected): error = "Вы должны выбрать по одному игроку на каждую позицию."
+        if not tournament_is_open:
+            error = "Прием составов на этот турнир уже закрыт!"
         else:
-            try:
-                cursor.execute('INSERT INTO fantasy_rosters (steam_id, player1, player2, player3, player4, player5, tournament) VALUES (?, ?, ?, ?, ?, ?, ?)', (steam_id_64, p1, p2, p3, p4, p5, current_tournament)); conn.commit()
-                session['saved_roster'] = selected; saved_roster_names = selected; is_locked = True; success = "Твой состав успешно сохранен! Изменить его больше нельзя."
-            except Exception as e: error = f"Ошибка: {e}"
+            p1, p2, p3, p4, p5 = request.form.get('role_1'), request.form.get('role_2'), request.form.get('role_3'), request.form.get('role_4'), request.form.get('role_5')
+            selected = [p1, p2, p3, p4, p5]
+            if not all(selected): 
+                error = "Вы должны выбрать по одному игроку на каждую позицию."
+            else:
+                try:
+                    cursor.execute('INSERT INTO fantasy_rosters (steam_id, player1, player2, player3, player4, player5, tournament) VALUES (?, ?, ?, ?, ?, ?, ?)', (steam_id_64, p1, p2, p3, p4, p5, current_tournament)); conn.commit()
+                    session['saved_roster'] = selected
+                    saved_roster_names = selected
+                    is_locked = True
+                    success = "Твой состав успешно сохранен!"
+                except Exception as e: 
+                    error = f"Ошибка: {e}"
             
     player_stats = []
     if saved_roster_names:
@@ -824,6 +846,8 @@ def fantasy():
         if total_points >= 200 and 'points_200' not in existing: cursor.execute("INSERT INTO user_achievements (steam_id, achievement_id) VALUES (?, ?)", (steam_id_64, 'points_200')); conn.commit()
         if total_points >= 700 and 'points_700' not in existing: cursor.execute("INSERT INTO user_achievements (steam_id, achievement_id) VALUES (?, ?)", (steam_id_64, 'points_700')); conn.commit()
     conn.close()
+        if not tournament_is_open and not saved_roster_names:
+            error = "Прием составов на этот турнир закрыт. Дождитесь следующего!"
     return render_template('fantasy.html', available_players=PRO_PLAYERS_DATA, current_tournament=current_tournament, error=error, success=success, saved_roster=saved_roster_names, player_stats=player_stats, is_locked=is_locked)
 
 @app.route('/fantasy/leaderboard')
@@ -1224,7 +1248,19 @@ def admin_panel():
                 success = f"Премиум успешно выдан для ID: {steam_id}"
             except Exception as e:
                 error = f"Ошибка: {e}"
-                
+                 elif action == 'close_tournament' and steam_id:
+            try:
+                cursor.execute("INSERT OR REPLACE INTO fantasy_tournaments (tournament_name, is_open) VALUES (?, 0)", (steam_id,))
+                conn.commit()
+                success = f"Турнир '{steam_id}' закрыт для приема составов."
+            except Exception as e: error = f"Ошибка: {e}"
+            
+        elif action == 'open_tournament' and steam_id:
+            try:
+                cursor.execute("INSERT OR REPLACE INTO fantasy_tournaments (tournament_name, is_open) VALUES (?, 1)", (steam_id,))
+                conn.commit()
+                success = f"Турнир '{steam_id}' открыт!"
+            except Exception as e: error = f"Ошибка: {e}"       
         elif action == 'remove' and steam_id:
             try:
                 cursor.execute("DELETE FROM user_premium WHERE steam_id = ?", (steam_id,))

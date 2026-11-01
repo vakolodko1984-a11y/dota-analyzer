@@ -924,7 +924,8 @@ def leaderboard_players():
                         "team": player['team'],
                         "gpm": avg_gpm,
                         "hero": hero_info.get('localized_name', 'Unknown'),
-                        "img": hero_info.get('img', '').split('?')[0] # Берем большой арт и убираем лишние параметры из ссылки
+                        "icon": hero_info.get('icon', ''),
+                        "img": hero_info.get('img', '').split('?')[0] if hero_info.get('img') else '' # Безопасное извлечение
                     })
             except:
                 continue

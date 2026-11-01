@@ -879,80 +879,87 @@ def psy_chat():
 
 @app.route('/leaderboard_players')
 def leaderboard_players():
-    conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT data, updated_at FROM leaderboard_cache WHERE id = 1')
-    row = cursor.fetchone()
-    current_time = time.time()
-    
-    if row and (current_time - row[1] < 900):
-        cached_data = json.loads(row[0])
-        if cached_data:
-            conn.close()
-            return render_template('leaderboard_players.html', top_players=cached_data)
-    
+    try:
+        conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT data, updated_at FROM leaderboard_cache WHERE id = 1')
+        row = cursor.fetchone()
+        current_time = time.time()
+        
+        if row and (current_time - row[1] < 900):
+            cached_data = json.loads(row[0])
+            if cached_data:
+                conn.close()
+                return render_template('leaderboard_players.html', top_players=cached_data)
+        
         top_players = []
-    
-    if not top_players:
+        
         for player in PRO_PLAYERS_DATA[:20]:
             acc_id = player.get('account_id')
             if not acc_id: continue
             try:
-                # Запрашиваем последние 20 матчей игрока
                 r = requests.get(f"https://api.opendota.com/api/players/{acc_id}/matches?limit=20", timeout=5)
                 if r.status_code == 200 and r.json():
                     matches = r.json()
-                    
-                    # 1. Считаем средний GPM
                     valid_gpms = [m.get('gold_per_min', 0) for m in matches if m.get('gold_per_min', 0) > 0]
                     avg_gpm = int(sum(valid_gpms) / len(valid_gpms)) if valid_gpms else 0
                     
-                    # 2. Ищем самого частого героя (сигнатурку)
                     hero_counts = {}
                     for m in matches:
                         h_id = m.get('hero_id')
                         if h_id:
                             hero_counts[h_id] = hero_counts.get(h_id, 0) + 1
                     
-                    # Берем героя, на котором он сыграл больше всего игр
                     best_hero_id = max(hero_counts, key=hero_counts.get) if hero_counts else 0
                     hero_info = HEROES.get(str(best_hero_id), {})
                     
+                    img_url = hero_info.get('img', '')
+                    if img_url:
+                        img_url = img_url.split('?')[0]
+                    else:
+                        img_url = ''
+
                     top_players.append({
                         "name": player['name'],
                         "team": player['team'],
                         "gpm": avg_gpm,
                         "hero": hero_info.get('localized_name', 'Unknown'),
                         "icon": hero_info.get('icon', ''),
-                        "img": hero_info.get('img', '').split('?')[0] if hero_info.get('img') else '' # Безопасное извлечение
+                        "img": img_url
                     })
-            except:
+            except Exception as e:
+                print(f"Ошибка с игроком {player['name']}: {e}")
                 continue
-            
-    # Запасной вариант, если OpenDota затупила
-    if not top_players:
-        sample_players = random.sample(PRO_PLAYERS_DATA, 10)
-        for player in sample_players:
-            h_id = random.choice(list(HEROES.keys()))
-            hero_info = HEROES.get(str(h_id), {})
-            top_players.append({
-                "name": player['name'],
-                "team": player['team'],
-                "gpm": random.randint(600, 950),
-                "hero": hero_info.get('localized_name', 'Unknown'),
-                "icon": hero_info.get('icon', '')
-            })
-            
-    top_players = sorted(top_players, key=lambda x: x['gpm'], reverse=True)[:10]
-    
-    if top_players:
-        cursor.execute('DELETE FROM leaderboard_cache')
-        cursor.execute('INSERT INTO leaderboard_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(top_players), current_time))
-        conn.commit()
+                
+        if not top_players:
+            import random
+            sample_players = random.sample(PRO_PLAYERS_DATA, 10)
+            for player in sample_players:
+                h_id = random.choice(list(HEROES.keys()))
+                hero_info = HEROES.get(str(h_id), {})
+                top_players.append({
+                    "name": player['name'],
+                    "team": player['team'],
+                    "gpm": random.randint(600, 950),
+                    "hero": hero_info.get('localized_name', 'Unknown'),
+                    "icon": hero_info.get('icon', ''),
+                    "img": hero_info.get('img', '').split('?')[0] if hero_info.get('img') else ''
+                })
+                
+        top_players = sorted(top_players, key=lambda x: x['gpm'], reverse=True)[:10]
         
-    conn.close()
-    return render_template('leaderboard_players.html', top_players=top_players)
+        if top_players:
+            cursor.execute('DELETE FROM leaderboard_cache')
+            cursor.execute('INSERT INTO leaderboard_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(top_players), current_time))
+            conn.commit()
+            
+        conn.close()
+        return render_template('leaderboard_players.html', top_players=top_players)
+        
+    except Exception as e:
+        # ЭТО ВЫВЕДЕТ ОШИБКУ ПРЯМО НА ЭКРАН
+        return f"<h1 style='color:red;'>ОШИБКА В КОДЕ:</h1><p style='font-size:20px;'>{str(e)}</p><p>Скинь этот текст в чат!</p>"
 
 @app.route('/guess', methods=['GET', 'POST'])
 def guess():

@@ -892,14 +892,10 @@ def leaderboard_players():
             conn.close()
             return render_template('leaderboard_players.html', top_players=cached_data)
     
-    top_players = []
+        top_players = []
     
-    if STRATZ_API_TOKEN:
-        pass # Оставляем заглушку, если вдруг STRATZ оживет
-        
-    # Если STRATZ не сработал, идем в OpenDota
     if not top_players:
-        for player in PRO_PLAYERS_DATA[:20]: # Берем первых 20 игроков
+        for player in PRO_PLAYERS_DATA[:20]:
             acc_id = player.get('account_id')
             if not acc_id: continue
             try:
@@ -908,24 +904,28 @@ def leaderboard_players():
                 if r.status_code == 200 and r.json():
                     matches = r.json()
                     
-                    # Считаем средний GPM по этим матчам
+                    # 1. Считаем средний GPM
                     valid_gpms = [m.get('gold_per_min', 0) for m in matches if m.get('gold_per_min', 0) > 0]
+                    avg_gpm = int(sum(valid_gpms) / len(valid_gpms)) if valid_gpms else 0
                     
-                    if valid_gpms:
-                        avg_gpm = int(sum(valid_gpms) / len(valid_gpms))
-                        
-                        # Находим героя, на котором он играл в последнем матче (для красоты)
-                        last_match = matches[0]
-                        hero_id = last_match.get('hero_id', 0)
-                        hero_info = HEROES.get(str(hero_id), {})
-                        
-                        top_players.append({
-                            "name": player['name'],
-                            "team": player['team'],
-                            "gpm": avg_gpm, # Используем средний GPM за 20 игр
-                            "hero": hero_info.get('localized_name', 'Unknown'),
-                            "icon": hero_info.get('icon', '')
-                        })
+                    # 2. Ищем самого частого героя (сигнатурку)
+                    hero_counts = {}
+                    for m in matches:
+                        h_id = m.get('hero_id')
+                        if h_id:
+                            hero_counts[h_id] = hero_counts.get(h_id, 0) + 1
+                    
+                    # Берем героя, на котором он сыграл больше всего игр
+                    best_hero_id = max(hero_counts, key=hero_counts.get) if hero_counts else 0
+                    hero_info = HEROES.get(str(best_hero_id), {})
+                    
+                    top_players.append({
+                        "name": player['name'],
+                        "team": player['team'],
+                        "gpm": avg_gpm,
+                        "hero": hero_info.get('localized_name', 'Unknown'),
+                        "img": hero_info.get('img', '').split('?')[0] # Берем большой арт и убираем лишние параметры из ссылки
+                    })
             except:
                 continue
             

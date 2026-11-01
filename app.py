@@ -721,7 +721,9 @@ def fantasy():
             acc_id = player_info.get('account_id', 0)
             points = 0.0
             has_data = False
-            if acc_id:
+            
+            # Если турнир НАЧАЛСЯ, тогда запрашиваем реальные очки
+            if is_tournament_started and acc_id:
                 try:
                     res = requests.get(f"https://api.opendota.com/api/players/{acc_id}/recentMatches", timeout=8)
                     if res.status_code == 200 and res.json():
@@ -731,13 +733,12 @@ def fantasy():
                         points = round(points, 1)
                         has_data = True
                 except: pass
+
+            # Если турнир не начался (или OpenDota не ответила), ставим 0
             if not has_data:
-                base_gpm = {"Pure": 680, "bzm": 650, "33": 550, "Ari": 450, "Whitemon": 350, "Nightfall": 670, "lorenof": 640, "DM": 560, "OmaR": 440, "GH": 340, "Kiritych": 690, "Save-": 660, "MieRo": 570, "swedenstrong": 460, "Kataomi": 330, "Yuma": 680, "RCY": 630, "Fayde": 540, "Bignum": 450, "Speeed": 350, "Natsumi": 650, "Topson": 620, "SSS": 550, "Onejey": 430, "skem": 320, "Satanic": 700, "No[o]ne-": 670, "Noticed": 580, "9Class": 480, "Dukalis": 340, "m1CKe": 690, "Malr1ne": 650, "Wisper": 560, "Boxi": 470, "tOfu": 330, "Yatoro": 710, "Larl": 680, "Batyuk": 590, "not me": 490, "rue": 350, "Watson": 660, "CHIRA_JUNIOR": 630, "ATF": 570, "Saksa": 480, "Maladych": 340, "Darklord^": 640, "Stojkov": 600, "SaberLight": 550, "Xsvampire": 450, "Kidaro": 330}
-                base = base_gpm.get(name, 500)
-                fake_gpm = base + random.randint(-50, 50)
-                if role <= 3: points = (fake_gpm / 10) + random.randint(3, 9) * 2 - random.randint(1, 5) * 1.5
-                else: points = random.randint(15, 25) * 2.5 - random.randint(1, 4) * 0.5
-                points = round(points, 1)
+                # (Оставляем фолбэк, но ставим 0, чтобы не было паб-очков)
+                points = 0.0
+
             player_stats.append({"name": name, "team": player_info.get('team', 'Unknown'), "role": role, "points": points})
 
     total_points = sum(p['points'] for p in player_stats)

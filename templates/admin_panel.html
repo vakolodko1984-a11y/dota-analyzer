@@ -2,39 +2,66 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Управление Премиумом</title>
+    <title>Управление сайтом</title>
     <style>
         :root { --bg: #0b1120; --card-bg: rgba(30, 41, 59, 0.85); --accent: #e11d48; --text: #f8fafc; --secondary: #94a3b8; --gold: #fbbf24; --border: #334155; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 40px; margin: 0; }
-        .container { max-width: 800px; margin: 0 auto; background: var(--card-bg); padding: 40px; border-radius: 16px; border: 1px solid var(--border); }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 40px; margin: 0; display: flex; justify-content: center; }
+        .container { max-width: 800px; width: 100%; background: var(--card-bg); padding: 40px; border-radius: 16px; border: 1px solid var(--border); backdrop-filter: blur(10px); }
         h1 { color: var(--gold); margin-top: 0; text-align: center; }
-        .form-group { display: flex; gap: 10px; margin-bottom: 30px; }
-        input { flex-grow: 1; padding: 15px; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: white; }
-        button { padding: 15px 30px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        button:hover { background: #be123c; }
+        
+        .section-title { color: var(--secondary); font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-top: 30px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        
+        .form-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        input { flex-grow: 1; padding: 15px; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: white; font-size: 15px; }
+        button { padding: 15px 20px; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        
+        .btn-give { background: var(--accent); }
+        .btn-give:hover { background: #be123c; }
+        .btn-close { background: #d97706; } /* Оранжевый для закрытия */
+        .btn-close:hover { background: #b45309; }
+        .btn-open { background: #22c55e; } /* Зеленый для открытия */
+        .btn-open:hover { background: #16a34a; }
+        .btn-remove { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 8px 12px; font-size: 12px; }
+        .btn-remove:hover { background: var(--accent); color: white; }
+        
         .success { background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #22c55e; }
         .error { background: rgba(225, 29, 72, 0.1); color: #fda4af; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid var(--accent); }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--gold); }
-        .btn-remove { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 5px 10px; font-size: 12px; }
-        .btn-remove:hover { background: var(--accent); color: white; }
-        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; }
+        th { color: var(--gold); font-weight: bold; }
+        
+        .nav-link { display: block; text-align: center; margin-top: 30px; color: var(--secondary); text-decoration: none; font-weight: bold; transition: 0.3s; }
+        .nav-link:hover { color: var(--accent); }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>👑 Управление Премиумом</h1>
+        <h1>👑 Админ-панель</h1>
         
         {% if success %}<div class="success">{{ success }}</div>{% endif %}
         {% if error %}<div class="error">{{ error }}</div>{% endif %}
 
+        <!-- БЛОК УПРАВЛЕНИЯ ТУРНИРАМИ -->
+        <div class="section-title">Управление Фэнтези-турнирами</div>
+        <form method="POST" class="form-group">
+            <input type="text" name="steam_id" placeholder="Название турнира (например, PARI Universe)" required>
+            <button type="submit" name="action" value="close_tournament" class="btn-close" title="Запретить сбор составов">Закрыть турнир</button>
+            <button type="submit" name="action" value="open_tournament" class="btn-open" title="Разрешить сбор составов">Открыть турнир</button>
+        </form>
+        <p style="font-size: 12px; color: var(--secondary); margin-top: -5px;">
+            * Введите точное название турнира. Если турнир закрыт, люди не смогут сохранить новый состав.
+        </p>
+
+        <!-- БЛОК УПРАВЛЕНИЯ ПРЕМИУМОМ -->
+        <div class="section-title">Выдача Премиум-подписки</div>
         <form method="POST" class="form-group">
             <input type="text" name="steam_id" placeholder="Введите Steam ID (64-битный)" required>
-            <button type="submit" name="action" value="give">Выдать Премиум</button>
+            <button type="submit" name="action" value="give" class="btn-give">Выдать Премиум</button>
         </form>
 
-        <h3>Активные подписки:</h3>
+        <!-- ТАБЛИЦА АКТИВНЫХ ПОДПИСОК -->
+        <div class="section-title">Активные подписки</div>
         <table>
             <thead>
                 <tr>
@@ -56,12 +83,12 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="3" style="text-align: center;">Пока нет активных подписок.</td></tr>
+                <tr><td colspan="3" style="text-align: center; color: var(--secondary);">Пока нет активных подписок.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <a href="/admin/logout" class="nav-link">Выйти из админки</a>
+        <a href="/admin/logout" class="nav-link" style="color: #ff6b6b;">Выйти из админки</a>
         <a href="/" class="nav-link">← На главную</a>
     </div>
 </body>

@@ -893,26 +893,41 @@ def leaderboard_players():
             return render_template('leaderboard_players.html', top_players=cached_data)
     
     top_players = []
-    # Используем OpenDota как основной источник
-    for player in PRO_PLAYERS_DATA[:20]:
-        acc_id = player.get('account_id')
-        if not acc_id: continue
-        try:
-            r = requests.get(f"https://api.opendota.com/api/players/{acc_id}/recentMatches", timeout=3)
-            if r.status_code == 200 and r.json():
-                m = r.json()[0]
-                gpm = m.get('gold_per_min', 0)
-                hero_id = m.get('hero_id', 0)
-                hero_info = HEROES.get(str(hero_id), {})
-                top_players.append({
-                    "name": player['name'],
-                    "team": player['team'],
-                    "gpm": gpm,
-                    "hero": hero_info.get('localized_name', 'Unknown'),
-                    "icon": hero_info.get('icon', '')
-                })
-        except:
-            continue
+    
+    if STRATZ_API_TOKEN:
+        pass # Оставляем заглушку, если вдруг STRATZ оживет
+        
+    # Если STRATZ не сработал, идем в OpenDota
+    if not top_players:
+        for player in PRO_PLAYERS_DATA[:20]: # Берем первых 20 игроков
+            acc_id = player.get('account_id')
+            if not acc_id: continue
+            try:
+                # Запрашиваем последние 20 матчей игрока
+                r = requests.get(f"https://api.opendota.com/api/players/{acc_id}/matches?limit=20", timeout=5)
+                if r.status_code == 200 and r.json():
+                    matches = r.json()
+                    
+                    # Считаем средний GPM по этим матчам
+                    valid_gpms = [m.get('gold_per_min', 0) for m in matches if m.get('gold_per_min', 0) > 0]
+                    
+                    if valid_gpms:
+                        avg_gpm = int(sum(valid_gpms) / len(valid_gpms))
+                        
+                        # Находим героя, на котором он играл в последнем матче (для красоты)
+                        last_match = matches[0]
+                        hero_id = last_match.get('hero_id', 0)
+                        hero_info = HEROES.get(str(hero_id), {})
+                        
+                        top_players.append({
+                            "name": player['name'],
+                            "team": player['team'],
+                            "gpm": avg_gpm, # Используем средний GPM за 20 игр
+                            "hero": hero_info.get('localized_name', 'Unknown'),
+                            "icon": hero_info.get('icon', '')
+                        })
+            except:
+                continue
             
     # Запасной вариант, если OpenDota затупила
     if not top_players:

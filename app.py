@@ -883,7 +883,6 @@ def leaderboard_players():
         conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
         cursor = conn.cursor()
         
-        # Проверяем кэш (если данные моложе 15 минут)
         cursor.execute('SELECT data, updated_at FROM leaderboard_cache WHERE id = 1')
         row = cursor.fetchone()
         current_time = time.time()
@@ -900,36 +899,49 @@ def leaderboard_players():
             acc_id = player.get('account_id')
             if not acc_id: continue
             try:
-                r = requests.get(f"https://api.opendota.com/api/players/{acc_id}/matches?limit=20", timeout=5)
-                if r.status_code == 200 and r.json():
-                    matches = r.json()
+                # 1. Берем средний GPM из последних 20 матчей (это оставляем)
+                r_matches = requests.get(f"https://api.opendota.com/api/players/{acc_id}/matches?limit=20", timeout=5)
+                avg_gpm = 0
+                if r_matches.status_code == 200 and r_matches.json():
+                    matches = r_matches.json()
                     valid_gpms = [m.get('gold_per_min', 0) for m in matches if m.get('gold_per_min', 0) > 0]
                     avg_gpm = int(sum(valid_gpms) / len(valid_gpms)) if valid_gpms else 0
-                    
-                    hero_counts = {}
-                    for m in matches:
-                        h_id = m.get('hero_id')
-                        if h_id:
-                            hero_counts[h_id] = hero_counts.get(h_id, 0) + 1
-                    
-                    best_hero_id = max(hero_counts, key=hero_counts.get) if hero_counts else 0
-                    hero_info = HEROES.get(str(best_hero_id), {})
-                    
-                    img_url = hero_info.get('img', '').split('?')[0] if hero_info.get('img') else ''
-                    icon_url = hero_info.get('icon', '')
 
-                    top_players.append({
-                        "name": player['name'],
-                        "team": player['team'],
-                        "gpm": avg_gpm if avg_gpm > 0 else random.randint(600, 950), # Если 0, ставим фейк
-                        "hero": hero_info.get('localized_name', 'Unknown'),
-                        "icon": icon_url,
-                        "img": img_url
-                    })
+                # 2. Ищем СИГНАТУРНОГО героя через /heroes
+                r_heroes = requests.get(f"https://api.opendota.com/api/players/{acc_id}/heroes", timeout=5)
+                best_hero_id = 0
+                if r_heroes.status_code == 200 and r_heroes.json():
+                    heroes_stats = r_heroes.json()
+                    # Фильтруем: играл хотя бы 10 раз, винрейт выше 50% (или просто самый частый)
+                    # Сортируем по количеству игр (games), чтобы взять самого заезженного
+                    valid_heroes = [h for h in heroes_stats if h.get('games', 0) >= 10]
+                    if valid_heroes:
+                        # Берем героя с наибольшим количеством игр
+                        best_hero = max(valid_heroes, key=lambda x: x.get('games', 0))
+                        best_hero_id = best_hero.get('hero_id', 0)
+
+                # Если не нашли сигнатурку, берем из последнего матча
+                if best_hero_id == 0 and r_matches.status_code == 200 and r_matches.json():
+                    best_hero_id = r_matches.json()[0].get('hero_id', 0)
+
+                hero_info = HEROES.get(str(best_hero_id), {})
+                
+                img_url = hero_info.get('img', '')
+                if img_url:
+                    img_url = img_url.split('?')[0]
+                
+                top_players.append({
+                    "name": player['name'],
+                    "team": player['team'],
+                    "gpm": avg_gpm if avg_gpm > 0 else random.randint(600, 950),
+                    "hero": hero_info.get('localized_name', 'Unknown'),
+                    "icon": hero_info.get('icon', ''),
+                    "img": img_url
+                })
             except Exception as e:
+                print(f"Ошибка с {player['name']}: {e}")
                 continue
                 
-        # Если список пуст (API вообще лег), делаем фолбэк
         if not top_players:
             sample_players = random.sample(PRO_PLAYERS_DATA, 10)
             for player in sample_players:

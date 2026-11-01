@@ -269,6 +269,16 @@ def get_player_matches_opendota(acc_id, limit=5):
     except: 
         pass
     return None
+def get_player_matches_valve(acc_id, limit=5):
+    if not STEAM_API_KEY: return None
+    params = {"key": STEAM_API_KEY, "account_id": acc_id, "matches_requested": limit}
+    try:
+        r = requests.get("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/", params=params, timeout=15)
+        if r.status_code == 200:
+            m = r.json().get("result", {}).get("matches", [])
+            if m: return m
+    except: pass
+    return None    
 
 def get_player_profile_from_steam(s_id):
     if not STEAM_API_KEY: return None

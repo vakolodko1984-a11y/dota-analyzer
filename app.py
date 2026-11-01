@@ -743,7 +743,7 @@ def fantasy():
     if not tournament_is_open and not saved_roster_names:
         error = "Прием составов на этот турнир закрыт. Дождитесь следующего!"
            
-    return render_template('fantasy.html', available_players=active_players, current_tournament=current_tournament, error=error, success=success, saved_roster=saved_roster_names, player_stats=player_stats, is_locked=is_locked)
+    return render_template('fantasy.html', active_players=active_players, current_tournament=current_tournament, error=error, success=success, saved_roster=saved_roster_names, player_stats=player_stats, is_locked=is_locked)
 
 @app.route('/fantasy/leaderboard')
 def fantasy_leaderboard():

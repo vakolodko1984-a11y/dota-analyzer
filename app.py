@@ -287,58 +287,125 @@ def enrich_pro_players_with_avatars(players):
     return players
 
 PRO_PLAYERS_DATA = [
-    {"name": "Pure", "team": "1win", "role": 1, "account_id": 331855530, "liquipedia": "https://liquipedia.net/dota2/Pure", "dotabuff": "https://www.dotabuff.com/players/331855530"},
-    {"name": "bzm", "team": "1win", "role": 2, "account_id": 93618577, "liquipedia": "https://liquipedia.net/dota2/Bzm", "dotabuff": "https://www.dotabuff.com/players/93618577"},
-    {"name": "33", "team": "1win", "role": 3, "account_id": 86698277, "liquipedia": "https://liquipedia.net/dota2/33", "dotabuff": "https://www.dotabuff.com/players/86698277"},
-    {"name": "Ari", "team": "1win", "role": 4, "account_id": 346412363, "liquipedia": "https://liquipedia.net/dota2/Ari", "dotabuff": "https://www.dotabuff.com/players/346412363"},
-    {"name": "Whitemon", "team": "1win", "role": 5, "account_id": 136829091, "liquipedia": "https://liquipedia.net/dota2/Whitemon", "dotabuff": "https://www.dotabuff.com/players/136829091"},
-    {"name": "Nightfall", "team": "Astra Invicta", "role": 1, "account_id": 124801257, "liquipedia": "https://liquipedia.net/dota2/Nightfall", "dotabuff": "https://www.dotabuff.com/players/124801257"},
-    {"name": "lorenof", "team": "Astra Invicta", "role": 2, "account_id": 210053851, "liquipedia": "https://liquipedia.net/dota2/Lorenof", "dotabuff": "https://www.dotabuff.com/players/210053851"},
-    {"name": "DM", "team": "Astra Invicta", "role": 3, "account_id": 56351509, "liquipedia": "https://liquipedia.net/dota2/DM", "dotabuff": "https://www.dotabuff.com/players/56351509"},
-    {"name": "OmaR", "team": "Astra Invicta", "role": 4, "account_id": 152168157, "liquipedia": "https://liquipedia.net/dota2/OmaR", "dotabuff": "https://www.dotabuff.com/players/152168157"},
-    {"name": "GH", "team": "Astra Invicta", "role": 5, "account_id": 101356886, "liquipedia": "https://liquipedia.net/dota2/GH", "dotabuff": "https://www.dotabuff.com/players/101356886"},
-    {"name": "Kiritych", "team": "BetBoom Team", "role": 1, "account_id": 172099728, "liquipedia": "https://liquipedia.net/dota2/Kiritych", "dotabuff": "https://www.dotabuff.com/players/172099728"},
-    {"name": "Save-", "team": "BetBoom Team", "role": 2, "account_id": 317880638, "liquipedia": "https://liquipedia.net/dota2/Save-", "dotabuff": "https://www.dotabuff.com/players/317880638"},
-    {"name": "MieRo", "team": "BetBoom Team", "role": 3, "account_id": 165564598, "liquipedia": "https://liquipedia.net/dota2/MieRo", "dotabuff": "https://www.dotabuff.com/players/165564598"},
-    {"name": "swedenstrong", "team": "BetBoom Team", "role": 4, "account_id": 175311897, "liquipedia": "https://liquipedia.net/dota2/Swedenstrong", "dotabuff": "https://www.dotabuff.com/players/175311897"},
-    {"name": "Kataomi", "team": "BetBoom Team", "role": 5, "account_id": 196878136, "liquipedia": "https://liquipedia.net/dota2/Kataomi", "dotabuff": "https://www.dotabuff.com/players/196878136"},
-    {"name": "Yuma", "team": "GamerLegion", "role": 1, "account_id": 177203952, "liquipedia": "https://liquipedia.net/dota2/Yuma", "dotabuff": "https://www.dotabuff.com/players/177203952"},
-    {"name": "RCY", "team": "GamerLegion", "role": 2, "account_id": 154974246, "liquipedia": "https://liquipedia.net/dota2/RCY", "dotabuff": "https://www.dotabuff.com/players/154974246"},
-    {"name": "Fayde", "team": "GamerLegion", "role": 3, "account_id": 160119017, "liquipedia": "https://liquipedia.net/dota2/Fayde", "dotabuff": "https://www.dotabuff.com/players/160119017"},
-    {"name": "Bignum", "team": "GamerLegion", "role": 4, "account_id": 90423751, "liquipedia": "https://liquipedia.net/dota2/Bignum", "dotabuff": "https://www.dotabuff.com/players/90423751"},
-    {"name": "Speeed", "team": "GamerLegion", "role": 5, "account_id": 191362875, "liquipedia": "https://liquipedia.net/dota2/Speeed", "dotabuff": "https://www.dotabuff.com/players/191362875"},
-    {"name": "Natsumi", "team": "OG", "role": 1, "account_id": 355168766, "liquipedia": "https://liquipedia.net/dota2/Natsumi", "dotabuff": "https://www.dotabuff.com/players/355168766"},
-    {"name": "Topson", "team": "OG", "role": 2, "account_id": 94054712, "liquipedia": "https://liquipedia.net/dota2/Topson", "dotabuff": "https://www.dotabuff.com/players/94054712"},
-    {"name": "SSS", "team": "OG", "role": 3, "account_id": 402583877, "liquipedia": "https://liquipedia.net/dota2/SSS", "dotabuff": "https://www.dotabuff.com/players/402583877"},
-    {"name": "Onejey", "team": "OG", "role": 4, "account_id": 181267255, "liquipedia": "https://liquipedia.net/dota2/Onejey", "dotabuff": "https://www.dotabuff.com/players/181267255"},
-    {"name": "skem", "team": "OG", "role": 5, "account_id": 100594231, "liquipedia": "https://liquipedia.net/dota2/Skem", "dotabuff": "https://www.dotabuff.com/players/100594231"},
-    {"name": "Satanic", "team": "PARIVISION", "role": 1, "account_id": 1044002267, "liquipedia": "https://liquipedia.net/dota2/Satanic", "dotabuff": "https://www.dotabuff.com/players/1044002267"},
-    {"name": "No[o]ne-", "team": "PARIVISION", "role": 2, "account_id": 106573901, "liquipedia": "https://liquipedia.net/dota2/Noone", "dotabuff": "https://www.dotabuff.com/players/106573901"},
-    {"name": "Noticed", "team": "PARIVISION", "role": 3, "account_id": 195108598, "liquipedia": "https://liquipedia.net/dota2/Noticed", "dotabuff": "https://www.dotabuff.com/players/195108598"},
-    {"name": "9Class", "team": "PARIVISION", "role": 4, "account_id": 164199202, "liquipedia": "https://liquipedia.net/dota2/9Class", "dotabuff": "https://www.dotabuff.com/players/164199202"},
-    {"name": "Dukalis", "team": "PARIVISION", "role": 5, "account_id": 73401082, "liquipedia": "https://liquipedia.net/dota2/Dukalis", "dotabuff": "https://www.dotabuff.com/players/73401082"},
-    {"name": "m1CKe", "team": "Team Liquid", "role": 1, "account_id": 152962063, "liquipedia": "https://liquipedia.net/dota2/MiCKe", "dotabuff": "https://www.dotabuff.com/players/152962063"},
-    {"name": "Malr1ne", "team": "Team Liquid", "role": 2, "account_id": 898455820, "liquipedia": "https://liquipedia.net/dota2/Malr1ne", "dotabuff": "https://www.dotabuff.com/players/898455820"},
-    {"name": "Wisper", "team": "Team Liquid", "role": 3, "account_id": 292921272, "liquipedia": "https://liquipedia.net/dota2/Wisper", "dotabuff": "https://www.dotabuff.com/players/292921272"},
-    {"name": "Boxi", "team": "Team Liquid", "role": 4, "account_id": 77490514, "liquipedia": "https://liquipedia.net/dota2/Boxi", "dotabuff": "https://www.dotabuff.com/players/77490514"},
-    {"name": "tOfu", "team": "Team Liquid", "role": 5, "account_id": 16497807, "liquipedia": "https://liquipedia.net/dota2/Tofu", "dotabuff": "https://www.dotabuff.com/players/16497807"},
-    {"name": "Yatoro", "team": "Team Spirit", "role": 1, "account_id": 321580662, "liquipedia": "https://liquipedia.net/dota2/Yatoro", "dotabuff": "https://www.dotabuff.com/players/321580662"},
-    {"name": "Larl", "team": "Team Spirit", "role": 2, "account_id": 106305042, "liquipedia": "https://liquipedia.net/dota2/Larl", "dotabuff": "https://www.dotabuff.com/players/106305042"},
-    {"name": "Batyuk", "team": "Team Spirit", "role": 3, "account_id": 140835095, "liquipedia": "https://liquipedia.net/dota2/Batyuk", "dotabuff": "https://www.dotabuff.com/players/140835095"},
-    {"name": "not me", "team": "Team Spirit", "role": 4, "account_id": 218231587, "liquipedia": "https://liquipedia.net/dota2/Mira", "dotabuff": "https://www.dotabuff.com/players/218231587"},
-    {"name": "rue", "team": "Team Spirit", "role": 5, "account_id": 847565596, "liquipedia": "https://liquipedia.net/dota2/Rue", "dotabuff": "https://www.dotabuff.com/players/847565596"},
-    {"name": "Watson", "team": "Team Yandex", "role": 1, "account_id": 171262902, "liquipedia": "https://liquipedia.net/dota2/Watson", "dotabuff": "https://www.dotabuff.com/players/171262902"},
-    {"name": "CHIRA_JUNIOR", "team": "Team Yandex", "role": 2, "account_id": 312436974, "liquipedia": "https://liquipedia.net/dota2/CHIRA_JUNIOR", "dotabuff": "https://www.dotabuff.com/players/312436974"},
-        {"name": "ATF", "team": "Team Yandex", "role": 3, "account_id": 183719386, "liquipedia": "https://liquipedia.net/dota2/ATF", "dotabuff": "https://www.dotabuff.com/players/183719386"},
-    {"name": "Saksa", "team": "Team Yandex", "role": 4, "account_id": 103735745, "liquipedia": "https://liquipedia.net/dota2/Saksa", "dotabuff": "https://www.dotabuff.com/players/103735745"},
-    {"name": "Maladych", "team": "Team Yandex", "role": 5, "account_id": 93817671, "liquipedia": "https://liquipedia.net/dota2/Maladych", "dotabuff": "https://www.dotabuff.com/players/93817671"},
-    {"name": "Darklord^", "team": "LEGION", "role": 1, "account_id": 879017980, "liquipedia": "https://liquipedia.net/dota2/Darklord", "dotabuff": "https://www.dotabuff.com/players/879017980"},
-    {"name": "Stojkov", "team": "LEGION", "role": 2, "account_id": 262476000, "liquipedia": "https://liquipedia.net/dota2/Stojkov", "dotabuff": "https://www.dotabuff.com/players/262476000"},
-    {"name": "SaberLight", "team": "LEGION", "role": 3, "account_id": 126212866, "liquipedia": "https://liquipedia.net/dota2/SaberLight", "dotabuff": "https://www.dotabuff.com/players/126212866"},
-    {"name": "Xsvampire", "team": "LEGION", "role": 4, "account_id": 326327879, "liquipedia": "https://liquipedia.net/dota2/Xsvampire", "dotabuff": "https://www.dotabuff.com/players/326327879"},
-    {"name": "Kidaro", "team": "LEGION", "role": 5, "account_id": 104334048, "liquipedia": "https://liquipedia.net/dota2/Kidaro", "dotabuff": "https://www.dotabuff.com/players/104334048"}
-]
+    # --- 1win ---
+    {"name": "Pure", "team": "1win", "role": 1, "account_id": 331855530, "tournaments": ["BLAST SLAM IX", "ESL One Munich 2027"], "liquipedia": "https://liquipedia.net/dota2/Pure", "dotabuff": "https://www.dotabuff.com/players/331855530"},
+    {"name": "bzm", "team": "1win", "role": 2, "account_id": 93618577, "tournaments": ["BLAST SLAM IX", "ESL One Munich 2027"], "liquipedia": "https://liquipedia.net/dota2/Bzm", "dotabuff": "https://www.dotabuff.com/players/93618577"},
+    {"name": "33", "team": "1win", "role": 3, "account_id": 86698277, "tournaments": ["BLAST SLAM IX", "ESL One Munich 2027"], "liquipedia": "https://liquipedia.net/dota2/33", "dotabuff": "https://www.dotabuff.com/players/86698277"},
+    {"name": "Ari", "team": "1win", "role": 4, "account_id": 346412363, "tournaments": ["BLAST SLAM IX", "ESL One Munich 2027"], "liquipedia": "https://liquipedia.net/dota2/Ari", "dotabuff": "https://www.dotabuff.com/players/346412363"},
+    {"name": "Whitemon", "team": "1win", "role": 5, "account_id": 136829091, "tournaments": ["BLAST SLAM IX", "ESL One Munich 2027"], "liquipedia": "https://liquipedia.net/dota2/Whitemon", "dotabuff": "https://www.dotabuff.com/players/136829091"},
 
+    # --- Astra Invicta ---
+    {"name": "Nightfall", "team": "Astra Invicta", "role": 1, "account_id": 124801257, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Nightfall", "dotabuff": "https://www.dotabuff.com/players/124801257"},
+    {"name": "lorenof", "team": "Astra Invicta", "role": 2, "account_id": 210053851, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Lorenof", "dotabuff": "https://www.dotabuff.com/players/210053851"},
+    {"name": "DM", "team": "Astra Invicta", "role": 3, "account_id": 56351509, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/DM", "dotabuff": "https://www.dotabuff.com/players/56351509"},
+    {"name": "OmaR", "team": "Astra Invicta", "role": 4, "account_id": 152168157, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/OmaR", "dotabuff": "https://www.dotabuff.com/players/152168157"},
+    {"name": "GH", "team": "Astra Invicta", "role": 5, "account_id": 101356886, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/GH", "dotabuff": "https://www.dotabuff.com/players/101356886"},
+
+    # --- BetBoom Team ---
+    {"name": "Kiritych", "team": "BetBoom Team", "role": 1, "account_id": 172099728, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Kiritych", "dotabuff": "https://www.dotabuff.com/players/172099728"},
+    {"name": "Save-", "team": "BetBoom Team", "role": 2, "account_id": 317880638, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Save-", "dotabuff": "https://www.dotabuff.com/players/317880638"},
+    {"name": "MieRo", "team": "BetBoom Team", "role": 3, "account_id": 165564598, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/MieRo", "dotabuff": "https://www.dotabuff.com/players/165564598"},
+    {"name": "swedenstrong", "team": "BetBoom Team", "role": 4, "account_id": 175311897, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Swedenstrong", "dotabuff": "https://www.dotabuff.com/players/175311897"},
+    {"name": "Kataomi", "team": "BetBoom Team", "role": 5, "account_id": 196878136, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Kataomi", "dotabuff": "https://www.dotabuff.com/players/196878136"},
+
+    # --- GamerLegion ---
+    {"name": "Yuma", "team": "GamerLegion", "role": 1, "account_id": 177203952, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Yuma", "dotabuff": "https://www.dotabuff.com/players/177203952"},
+    {"name": "RCY", "team": "GamerLegion", "role": 2, "account_id": 154974246, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/RCY", "dotabuff": "https://www.dotabuff.com/players/154974246"},
+    {"name": "Fayde", "team": "GamerLegion", "role": 3, "account_id": 160119017, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Fayde", "dotabuff": "https://www.dotabuff.com/players/160119017"},
+    {"name": "Bignum", "team": "GamerLegion", "role": 4, "account_id": 90423751, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Bignum", "dotabuff": "https://www.dotabuff.com/players/90423751"},
+    {"name": "Speeed", "team": "GamerLegion", "role": 5, "account_id": 191362875, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Speeed", "dotabuff": "https://www.dotabuff.com/players/191362875"},
+
+    # --- OG ---
+    {"name": "Natsumi", "team": "OG", "role": 1, "account_id": 355168766, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Natsumi", "dotabuff": "https://www.dotabuff.com/players/355168766"},
+    {"name": "Topson", "team": "OG", "role": 2, "account_id": 94054712, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Topson", "dotabuff": "https://www.dotabuff.com/players/94054712"},
+    {"name": "SSS", "team": "OG", "role": 3, "account_id": 402583877, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/SSS", "dotabuff": "https://www.dotabuff.com/players/402583877"},
+    {"name": "Onejey", "team": "OG", "role": 4, "account_id": 181267255, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Onejey", "dotabuff": "https://www.dotabuff.com/players/181267255"},
+    {"name": "skem", "team": "OG", "role": 5, "account_id": 100594231, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Skem", "dotabuff": "https://www.dotabuff.com/players/100594231"},
+
+    # --- PARIVISION ---
+    {"name": "Satanic", "team": "PARIVISION", "role": 1, "account_id": 1044002267, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Satanic", "dotabuff": "https://www.dotabuff.com/players/1044002267"},
+    {"name": "No[o]ne-", "team": "PARIVISION", "role": 2, "account_id": 106573901, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Noone", "dotabuff": "https://www.dotabuff.com/players/106573901"},
+    {"name": "Noticed", "team": "PARIVISION", "role": 3, "account_id": 195108598, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Noticed", "dotabuff": "https://www.dotabuff.com/players/195108598"},
+    {"name": "9Class", "team": "PARIVISION", "role": 4, "account_id": 164199202, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/9Class", "dotabuff": "https://www.dotabuff.com/players/164199202"},
+    {"name": "Dukalis", "team": "PARIVISION", "role": 5, "account_id": 73401082, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Dukalis", "dotabuff": "https://www.dotabuff.com/players/73401082"},
+
+    # --- Team Liquid ---
+    {"name": "m1CKe", "team": "Team Liquid", "role": 1, "account_id": 152962063, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/MiCKe", "dotabuff": "https://www.dotabuff.com/players/152962063"},
+    {"name": "Malr1ne", "team": "Team Liquid", "role": 2, "account_id": 898455820, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Malr1ne", "dotabuff": "https://www.dotabuff.com/players/898455820"},
+    {"name": "Wisper", "team": "Team Liquid", "role": 3, "account_id": 292921272, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Wisper", "dotabuff": "https://www.dotabuff.com/players/292921272"},
+    {"name": "Boxi", "team": "Team Liquid", "role": 4, "account_id": 77490514, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Boxi", "dotabuff": "https://www.dotabuff.com/players/77490514"},
+    {"name": "tOfu", "team": "Team Liquid", "role": 5, "account_id": 16497807, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Tofu", "dotabuff": "https://www.dotabuff.com/players/16497807"},
+
+    # --- Team Spirit ---
+    {"name": "Yatoro", "team": "Team Spirit", "role": 1, "account_id": 321580662, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Yatoro", "dotabuff": "https://www.dotabuff.com/players/321580662"},
+    {"name": "Larl", "team": "Team Spirit", "role": 2, "account_id": 106305042, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Larl", "dotabuff": "https://www.dotabuff.com/players/106305042"},
+    {"name": "Batyuk", "team": "Team Spirit", "role": 3, "account_id": 140835095, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Batyuk", "dotabuff": "https://www.dotabuff.com/players/140835095"},
+    {"name": "not me", "team": "Team Spirit", "role": 4, "account_id": 218231587, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Mira", "dotabuff": "https://www.dotabuff.com/players/218231587"},
+    {"name": "rue", "team": "Team Spirit", "role": 5, "account_id": 847565596, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Rue", "dotabuff": "https://www.dotabuff.com/players/847565596"},
+
+    # --- Team Yandex ---
+    {"name": "Watson", "team": "Team Yandex", "role": 1, "account_id": 171262902, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Watson", "dotabuff": "https://www.dotabuff.com/players/171262902"},
+    {"name": "CHIRA_JUNIOR", "team": "Team Yandex", "role": 2, "account_id": 312436974, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/CHIRA_JUNIOR", "dotabuff": "https://www.dotabuff.com/players/312436974"},
+    {"name": "ATF", "team": "Team Yandex", "role": 3, "account_id": 183719386, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/ATF", "dotabuff": "https://www.dotabuff.com/players/183719386"},
+    {"name": "Saksa", "team": "Team Yandex", "role": 4, "account_id": 103735745, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Saksa", "dotabuff": "https://www.dotabuff.com/players/103735745"},
+    {"name": "Maladych", "team": "Team Yandex", "role": 5, "account_id": 93817671, "tournaments": ["BLAST SLAM IX"], "liquipedia": "https://liquipedia.net/dota2/Maladych", "dotabuff": "https://www.dotabuff.com/players/93817671"},
+
+    # --- Aurora Gaming ---
+    {"name": "skiter", "team": "Aurora Gaming", "role": 1, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Mikoto", "team": "Aurora Gaming", "role": 2, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Ws", "team": "Aurora Gaming", "role": 3, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Mira", "team": "Aurora Gaming", "role": 4, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "kaori", "team": "Aurora Gaming", "role": 5, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+
+    # --- Pipsqueak+4 ---
+    {"name": "Darklord^", "team": "Pipsqueak+4", "role": 1, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Copy", "team": "Pipsqueak+4", "role": 2, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Malik", "team": "Pipsqueak+4", "role": 3, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Ekki", "team": "Pipsqueak+4", "role": 4, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "aik", "team": "Pipsqueak+4", "role": 5, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+
+    # --- LGD Gaming ---
+    {"name": "Wits", "team": "LGD Gaming", "role": 1, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "SumaiL", "team": "LGD Gaming", "role": 2, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Davai", "team": "LGD Gaming", "role": 3, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Thiolicor", "team": "LGD Gaming", "role": 4, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Sneyking", "team": "LGD Gaming", "role": 5, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+
+    # --- Team Nemesis ---
+    {"name": "JaCkky", "team": "Team Nemesis", "role": 1, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Ken", "team": "Team Nemesis", "role": 2, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Jabz", "team": "Team Nemesis", "role": 3, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Jhocam", "team": "Team Nemesis", "role": 4, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "NARMAN", "team": "Team Nemesis", "role": 5, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+
+    # --- Natus Vincere ---
+    {"name": "gotthejuice", "team": "Natus Vincere", "role": 1, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Niku", "team": "Natus Vincere", "role": 2, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "pma", "team": "Natus Vincere", "role": 3, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "daze", "team": "Natus Vincere", "role": 4, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Riddys", "team": "Natus Vincere", "role": 5, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+
+    # --- Dawn Bulls ---
+    {"name": "Shad", "team": "Dawn Bulls", "role": 1, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "sanctity-", "team": "Dawn Bulls", "role": 2, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Xibbe", "team": "Dawn Bulls", "role": 3, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "yamich", "team": "Dawn Bulls", "role": 4, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Se", "team": "Dawn Bulls", "role": 5, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+
+    # --- Xtreme Gaming ---
+    {"name": "Ame", "team": "Xtreme Gaming", "role": 1, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "Xm", "team": "Xtreme Gaming", "role": 2, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "zeal", "team": "Xtreme Gaming", "role": 3, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "XinQ", "team": "Xtreme Gaming", "role": 4, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+    {"name": "BoBoKa", "team": "Xtreme Gaming", "role": 5, "account_id": 0, "tournaments": ["BLAST SLAM IX"]},
+
+    # --- LEGION (Скрыты из фэнтези, но остаются в базе) ---
+    {"name": "Darklord^", "team": "LEGION", "role": 1, "account_id": 879017980, "tournaments": [], "liquipedia": "https://liquipedia.net/dota2/Darklord", "dotabuff": "https://www.dotabuff.com/players/879017980"},
+    {"name": "Stojkov", "team": "LEGION", "role": 2, "account_id": 262476000, "tournaments": [], "liquipedia": "https://liquipedia.net/dota2/Stojkov", "dotabuff": "https://www.dotabuff.com/players/262476000"},
+    {"name": "SaberLight", "team": "LEGION", "role": 3, "account_id": 126212866, "tournaments": [], "liquipedia": "https://liquipedia.net/dota2/SaberLight", "dotabuff": "https://www.dotabuff.com/players/126212866"},
+    {"name": "Xsvampire", "team": "LEGION", "role": 4, "account_id": 326327879, "tournaments": [], "liquipedia": "https://liquipedia.net/dota2/Xsvampire", "dotabuff": "https://www.dotabuff.com/players/326327879"},
+    {"name": "Kidaro", "team": "LEGION", "role": 5, "account_id": 104334048, "tournaments": [], "liquipedia": "https://liquipedia.net/dota2/Kidaro", "dotabuff": "https://www.dotabuff.com/players/104334048"}
+]
 @app.route('/login/steam')
 def login_steam():
     params = {'openid.ns': 'http://specs.openid.net/auth/2.0', 'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select', 'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select', 'openid.mode': 'checkid_setup', 'openid.return_to': url_for('authorize_steam', _external=True), 'openid.realm': url_for('index', _external=True)}
@@ -596,7 +663,7 @@ def pros(): return render_template('pros.html', pro_players=enrich_pro_players_w
 @app.route('/tournaments')
 def tournaments():
     return render_template('tournaments.html', tournaments=[
-        {"name": "PARI Universe", "dates": "22 октября — 1 ноября 2026", "location": "Онлайн (Европа)", "prize": "$250,000", "status": "Завершён", "description": "Турнир от FISSURE и PARI. Победитель - Team Spirit", "link": "https://liquipedia.net/dota2/PARI_Universe/1"},
+        {"name": "BLAST SLAM IX", "dates": "20 — 29 ноября 2026", "location": "Онлайн (Европа)", "prize": "$750,000", "status": "Предстоящий", "description": "Крупный турнир от BLAST. 16 команд, GSL + Double Elimination.", "link": "https://liquipedia.net/dota2/BLAST/SLAM/9"},
         {"name": "ESL One Munich 2027", "dates": "4 — 11 апреля 2027", "location": "Мюнхен, Германия", "prize": "$1,000,000", "status": "Предстоящий", "description": "Крупный LAN-турнир от ESL.", "link": "https://liquipedia.net/dota2/ESL_One/Munich/2027"},
         {"name": "The International 2026", "dates": "13 — 23 августа 2026", "location": "Шанхай, Китай", "prize": "$1,600,000+", "status": "Завершён", "description": "Главный турнир года.", "link": "https://liquipedia.net/dota2/The_International/2026"}
     ])
@@ -605,7 +672,7 @@ def tournaments():
 def fantasy():
     steam_id_64 = session.get('steam_id')
     if not steam_id_64: return redirect(url_for('login_steam'))
-    current_tournament = "PARI Universe"; error, success = None, None
+    current_tournament = "BLAST SLAM IX"; error, success = None, None
     conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db')); cursor = conn.cursor()
     valid_names = [p['name'] for p in PRO_PLAYERS_DATA]
     cursor.execute("SELECT id, player1, player2, player3, player4, player5 FROM fantasy_rosters WHERE steam_id = ? AND tournament = ?", (steam_id_64, current_tournament))
@@ -676,7 +743,7 @@ def fantasy():
     if not tournament_is_open and not saved_roster_names:
         error = "Прием составов на этот турнир закрыт. Дождитесь следующего!"
            
-    return render_template('fantasy.html', available_players=PRO_PLAYERS_DATA, current_tournament=current_tournament, error=error, success=success, saved_roster=saved_roster_names, player_stats=player_stats, is_locked=is_locked)
+    return render_template('fantasy.html', available_players=active_players, current_tournament=current_tournament, error=error, success=success, saved_roster=saved_roster_names, player_stats=player_stats, is_locked=is_locked)
 
 @app.route('/fantasy/leaderboard')
 def fantasy_leaderboard():

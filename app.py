@@ -261,6 +261,15 @@ def get_player_matches_from_stratz(acc_id, limit=5):
         except: pass
     return []
 
+def get_player_matches_opendota(acc_id, limit=5):
+    try:
+        r = requests.get(f"https://api.opendota.com/api/players/{acc_id}/matches?limit={limit}", timeout=10)
+        if r.status_code == 200: 
+            return r.json()
+    except: 
+        pass
+    return None
+
 def get_player_profile_from_steam(s_id):
     if not STEAM_API_KEY: return None
     params = {"key": STEAM_API_KEY, "steamids": s_id}

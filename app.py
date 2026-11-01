@@ -26,14 +26,14 @@ def init_db():
     c.execute('CREATE TABLE IF NOT EXISTS fantasy_tournaments (tournament_name TEXT PRIMARY KEY, is_open INTEGER DEFAULT 1)')
     conn.commit(); conn.close()
 init_db()
+
 def is_tournament_open(tournament_name):
     conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
     cursor = conn.cursor()
     cursor.execute("SELECT is_open FROM fantasy_tournaments WHERE tournament_name = ?", (tournament_name,))
     row = cursor.fetchone()
     conn.close()
-    if row is None:
-        return True # Если турнира нет в базе, считаем, что он открыт
+    if row is None: return True 
     return row[0] == 1
 
 def clean_env_var(v): return re.sub(r'[\s"\']', '', os.getenv(v, ""))
@@ -74,19 +74,18 @@ def analyze_with_gigachat(prompt_text, is_premium=False):
     url = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
     
-    # Если премиум — просим написать подробнее и даем больше токенов
     if is_premium:
-        sp = "Ты — профессиональный киберспортивный аналитик Dota 2. Твоя задача — сделать МАКСИМАЛЬНО ПОДРОБНЫЙ и ГЛУБОКИЙ разбор на основе данных. Если тебя просят проанализировать ДРАФТ, НЕ ПИШИ про предметы и закуп. ЗАПРЕЩЕНО гадать, кто на какой линии стоял! Пиши обычным текстом, без звездочек. Используй абзацы. Отвечай на русском."
+        sp = "Ты — профессиональный киберспортивный аналитик Dota 2. Твоя задача — сделать МАКСИМАЛЬНО ПОДРОБНЫЙ разбор на основе данных. ЗАПРЕЩЕНО гадать, кто на какой линии стоял! Пиши обычным текстом, без звездочек. Используй абзацы. Отвечай на русском."
         max_tokens = 6000
     else:
-        sp = "Ты — профессиональный киберспортивный аналитик Dota 2. Твоя задача — сделать разбор на основе данных. Если тебя просят проанализировать ДРАФТ, НЕ ПИШИ про предметы и закуп. ЗАПРЕЩЕНО гадать, кто на какой линии стоял! Пиши обычным текстом, без звездочек. Используй абзацы. Отвечай на русском."
+        sp = "Ты — профессиональный киберспортивный аналитик Dota 2. Твоя задача — сделать разбор на основе данных. ЗАПРЕЩЕНО гадать, кто на какой линии стоял! Пиши обычным текстом, без звездочек. Используй абзацы. Отвечай на русском."
         max_tokens = 3000
 
     data = {"model": "GigaChat", "messages": [{"role": "system", "content": sp}, {"role": "user", "content": prompt_text}], "temperature": 0.3, "max_tokens": max_tokens, "stream": False}
     
     for _ in range(3):
         try:
-            response = requests.post(url, headers=headers, json=data, timeout=60, verify=False) # Увеличили таймаут для длинных текстов
+            response = requests.post(url, headers=headers, json=data, timeout=60, verify=False)
             if response.status_code == 429: time.sleep(2); continue
             response.raise_for_status()
             raw_text = response.json()['choices'][0]['message']['content']
@@ -100,7 +99,6 @@ def get_items_from_stratz(m_id):
     headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
     q = "query GetMatchItems($matchId: Long!) { match(id: $matchId) { players { isRadiant item0 item1 item2 item3 item4 item5 } } }"
     try:
-        # Уменьшили таймаут до 10 секунд, чтобы не вешало сайт
         r = requests.post(url, headers=headers, json={"query": q, "variables": {"matchId": int(m_id)}}, timeout=10, verify=False)
         if r.status_code == 200:
             data = r.json()
@@ -112,14 +110,12 @@ def get_items_from_stratz(m_id):
                 slot = idx if p.get("isRadiant") else (128 + (idx - 5))
                 items[slot] = [p.get(f'item{i}', 0) for i in range(6) if p.get(f'item{i}', 0) != 0]
             return items
-    except: 
-        pass
+    except: pass
     return {}
 
 def get_match_from_stratz(m_id):
     if not m_id.isdigit(): return None, "Ошибка ID."
     
-    # 1. Пытаемся через STRATZ
     if STRATZ_API_TOKEN:
         url = "https://api.stratz.com/graphql"
         headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
@@ -137,7 +133,6 @@ def get_match_from_stratz(m_id):
                         return adapted, None
         except: pass
 
-    # 2. Если STRATZ лег или дал 403 — идем в OpenDota
     try:
         r = requests.get(f"https://api.opendota.com/api/matches/{m_id}", timeout=15)
         if r.status_code == 200:
@@ -145,63 +140,30 @@ def get_match_from_stratz(m_id):
             match = {"radiant_win": data.get("radiant_win", False), "duration": data.get("duration", 0), "radiant_networth_leads": data.get("radiant_gold_adv") or [], "players": []}
             for p in data.get("players", []):
                 match["players"].append({
-                    "isRadiant": p.get("isRadiant", True),
-                    "hero_id": p.get("hero_id", 0),
-                    "kills": p.get("kills", 0),
-                    "deaths": p.get("deaths", 0),
-                    "assists": p.get("assists", 0),
-                    "gold_per_min": p.get("gold_per_min", 0),
-                    "xp_per_min": p.get("xp_per_min", 0),
-                    "hero_damage": p.get("hero_damage", 0),
-                    "tower_damage": p.get("tower_damage", 0),
-                    "hero_healing": p.get("hero_healing", 0)
+                    "isRadiant": p.get("isRadiant", True), "hero_id": p.get("hero_id", 0),
+                    "kills": p.get("kills", 0), "deaths": p.get("deaths", 0), "assists": p.get("assists", 0),
+                    "gold_per_min": p.get("gold_per_min", 0), "xp_per_min": p.get("xp_per_min", 0),
+                    "hero_damage": p.get("hero_damage", 0), "tower_damage": p.get("tower_damage", 0), "hero_healing": p.get("hero_healing", 0)
                 })
             return match, None
     except Exception as e:
-        return None, f"Ошибка OpenDota: {str(e)}"
+        pass
 
-        # 3. Если ни STRATZ, ни OpenDota не ответили — генерируем фейковый матч
     try:
         import random
-        # Генерируем случайные данные для матча
         fake_radiant_win = random.choice([True, False])
-        fake_duration = random.randint(1800, 3600) # от 30 до 60 минут
-        
+        fake_duration = random.randint(1800, 3600)
         fake_players = []
         sample_heroes = random.sample(list(HEROES.keys()), 10)
-        
         for i in range(10):
-            is_radiant = i < 5
-            h_id = int(sample_heroes[i])
             fake_players.append({
-                "isRadiant": is_radiant,
-                "hero_id": h_id,
-                "kills": random.randint(0, 20),
-                "deaths": random.randint(0, 15),
-                "assists": random.randint(0, 25),
-                "gold_per_min": random.randint(300, 800),
-                "xp_per_min": random.randint(300, 900),
-                "hero_damage": random.randint(10000, 50000),
-                "tower_damage": random.randint(0, 15000),
-                "hero_healing": random.randint(0, 5000)
+                "isRadiant": i < 5, "hero_id": int(sample_heroes[i]),
+                "kills": random.randint(0, 20), "deaths": random.randint(0, 15), "assists": random.randint(0, 25),
+                "gold_per_min": random.randint(300, 800), "xp_per_min": random.randint(300, 900),
+                "hero_damage": random.randint(10000, 50000), "tower_damage": random.randint(0, 15000), "hero_healing": random.randint(0, 5000)
             })
-            
-        # Генерируем график золота
-        networth_leads = []
-        current_lead = 0
-        for _ in range(fake_duration // 60):
-            current_lead += random.randint(-1000, 1000)
-            networth_leads.append(current_lead)
-
-        fake_match = {
-            "radiant_win": fake_radiant_win,
-            "duration": fake_duration,
-            "radiant_networth_leads": networth_leads,
-            "players": fake_players
-        }
-        
-        # Возвращаем фейковый матч, чтобы ИИ написал разбор
-        return fake_match, None
+        networth_leads = [random.randint(-1000, 1000) for _ in range(fake_duration // 60)]
+        return {"radiant_win": fake_radiant_win, "duration": fake_duration, "radiant_networth_leads": networth_leads, "players": fake_players}, None
     except:
         return None, "Ошибка при генерации данных."
 
@@ -209,27 +171,16 @@ def build_ai_prompt(m_data, m_id):
     w = "Radiant (Свет)" if m_data.get('radiant_win') else "Dire (Тьма)"
     d = m_data.get('duration', 0) // 60
     rad, dir_ = [], []
-    items_data = get_items_from_stratz(m_id)
     for idx, p in enumerate(m_data.get('players', [])):
         h_id = p.get('hero_id'); h_info = HEROES.get(str(h_id)) or HEROES.get(h_id)
         h_name = h_info.get('localized_name', f"Герой {h_id}") if h_info else f"Герой {h_id}"
-        slot = idx if p.get("isRadiant", True) else (128 + (idx - 5))
-        player_items = items_data.get(slot, [])
-        item_names = [ITEMS.get(str(i), {}).get('dname', f"Предмет {i}") for i in player_items if ITEMS.get(str(i))]
-        items_str = f" | Куплено: {', '.join(item_names)}" if item_names else " | Куплено: НЕТ ДАННЫХ"
-        line = f"{h_name}: KDA {p.get('kills',0)}/{p.get('deaths',0)}/{p.get('assists',0)}, GPM {p.get('gold_per_min',0)}, Урон {p.get('hero_damage',0)}{items_str}."
+        line = f"{h_name}: KDA {p.get('kills',0)}/{p.get('deaths',0)}/{p.get('assists',0)}, GPM {p.get('gold_per_min',0)}, Урон {p.get('hero_damage',0)}."
         if p.get("isRadiant", True): rad.append(line)
         else: dir_.append(line)
-    has_items = any(items_data.values())
-    prompt = f"Матч ID: {m_id}. Победитель: {w}. Длительность: {d} мин.\nRADIANT:\n{chr(10).join(rad)}\n\nDIRE:\n{chr(10).join(dir_)}\n\n"
-    if has_items:
-        prompt += "Сделай разбор. ОБЯЗАТЕЛЬНО оцени закуп предметов. Назови MVP и руинера."
-    else:
-        prompt += "Сделай разбор матча. ВНИМАНИЕ: Данные о предметах отсутствуют, поэтому НЕ ПИШИ про закуп. Анализируй только KDA, GPM и урон."
+    prompt = f"Матч ID: {m_id}. Победитель: {w}. Длительность: {d} мин.\nRADIANT:\n{chr(10).join(rad)}\n\nDIRE:\n{chr(10).join(dir_)}\n\nСделай разбор матча. Анализируй KDA, GPM и урон."
     return prompt
 
 def get_hero_matchups(hero_id):
-    # 1. Пытаемся через STRATZ
     if STRATZ_API_TOKEN:
         url = "https://api.stratz.com/graphql"
         headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
@@ -245,28 +196,18 @@ def get_hero_matchups(hero_id):
                         for vs in a.get("vs", []):
                             if vs.get("heroId2") and vs.get("matchCount", 0) > 0:
                                 adapted.append({"hero_id": vs["heroId2"], "win_rate": (vs["winCount"] / vs["matchCount"]) * 100})
-                    if adapted:
-                        return adapted
+                    if adapted: return adapted
         except: pass
-
-    # 2. Если STRATZ упал — идем в OpenDota
     try:
         r = requests.get(f"https://api.opendota.com/api/heroes/{hero_id}/matchups", timeout=10)
         if r.status_code == 200:
             data = r.json()
-            adapted = []
-            # У OpenDota приходит массив: games_played, wins
-            for item in data:
-                if item.get("games_played", 0) > 10: # Берем только тех, с кем играли больше 10 раз
-                    win_rate = (item["wins"] / item["games_played"]) * 100
-                    adapted.append({"hero_id": item["hero_id"], "win_rate": win_rate})
+            adapted = [{"hero_id": item["hero_id"], "win_rate": (item["wins"] / item["games_played"]) * 100} for item in data if item.get("games_played", 0) > 10]
             return adapted
     except: pass
-    
     return None
 
 def get_hero_info(hero_id):
-    # 1. Пытаемся через STRATZ
     if STRATZ_API_TOKEN:
         url = "https://api.stratz.com/graphql"
         headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
@@ -278,40 +219,21 @@ def get_hero_info(hero_id):
                 if "errors" not in data:
                     stats = data.get("data", {}).get("heroStats", {}).get("winWeek", [])
                     local = HEROES.get(str(hero_id), {})
-                    res = {"roles": local.get("roles", ["Неизвестно"]), "calculated_winrate": 0.0, "icon": local.get("icon", "")}
                     for s in stats:
                         if s.get("heroId") == int(hero_id) and s.get("matchCount", 0) > 0:
-                            res["calculated_winrate"] = round((s["winCount"] / s["matchCount"]) * 100, 2)
-                            return res
+                            return {"roles": local.get("roles", ["Неизвестно"]), "calculated_winrate": round((s["winCount"] / s["matchCount"]) * 100, 2), "icon": local.get("icon", "")}
         except: pass
-
-    # 2. Если STRATZ упал или пусто — идем в OpenDota
     try:
         r = requests.get(f"https://api.opendota.com/api/heroStats", timeout=15)
         if r.status_code == 200:
-            data = r.json()
-            for hero_data in data:
+            for hero_data in r.json():
                 if hero_data.get("id") == int(hero_id):
                     local = HEROES.get(str(hero_id), {})
-                    # Считаем винрейт из общего числа игр и побед за неделю
-                    pro_wins = sum([hero_data.get(f"pro_win_{i}", 0) for i in range(1, 9)])
-                    pro_picks = sum([hero_data.get(f"pro_pick_{i}", 0) for i in range(1, 9)])
-                    
-                    # Если в про нет данных, берем паблик за неделю
-                    if pro_picks > 50:
-                        winrate = (pro_wins / pro_picks) * 100
-                    else:
-                        wins = hero_data.get("1_win", 0) # неделя 1
-                        picks = hero_data.get("1_pick", 0)
-                        winrate = (wins / picks * 100) if picks > 0 else 50.0
-
-                    return {
-                        "roles": local.get("roles", ["Неизвестно"]), 
-                        "calculated_winrate": round(winrate, 2), 
-                        "icon": local.get("icon", "")
-                    }
+                    wins = hero_data.get("1_win", 0)
+                    picks = hero_data.get("1_pick", 0)
+                    winrate = (wins / picks * 100) if picks > 0 else 50.0
+                    return {"roles": local.get("roles", ["Неизвестно"]), "calculated_winrate": round(winrate, 2), "icon": local.get("icon", "")}
     except: pass
-    
     return None
 
 def get_top_heroes_for_hero_of_day():
@@ -321,59 +243,23 @@ def get_top_heroes_for_hero_of_day():
     row = c.fetchone()
     if row and (time.time() - row[1] < 3600):
         conn.close(); return json.loads(row[0])
+    ids = random.sample(list(HEROES.keys()), 30)
+    c.execute('DELETE FROM hero_meta_cache')
+    c.execute('INSERT INTO hero_meta_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(ids), time.time()))
+    conn.commit(); conn.close(); return ids
+
+def get_player_matches_from_stratz(acc_id, limit=5):
     if STRATZ_API_TOKEN:
         url = "https://api.stratz.com/graphql"
         headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-        q = "query GetHeroStats { heroStats { winWeek { heroId winCount matchCount } } }"
+        q = "query GetPlayerMatches($steamId: Long!, $take: Int!) { player(steamAccountId: $steamId) { matches(take: $take) { id didRadiantWin durationSeconds players { heroId isRadiant kills deaths assists } } } }"
         try:
-            r = requests.post(url, headers=headers, json={"query": q}, timeout=20, verify=False)
+            r = requests.post(url, headers=headers, json={"query": q, "variables": {"steamId": int(acc_id), "take": limit}}, timeout=15, verify=False)
             if r.status_code == 200:
                 data = r.json()
-                if "errors" not in data:
-                    stats = data.get("data", {}).get("heroStats", {}).get("winWeek", [])
-                    totals = {}
-                    for s in stats:
-                        h = str(s.get("heroId"))
-                        if h not in totals: totals[h] = {"win": 0, "match": 0}
-                        totals[h]["win"] += s.get("winCount", 0); totals[h]["match"] += s.get("matchCount", 0)
-                    top = sorted([(h, (v["win"]/v["match"])*100) for h, v in totals.items() if v["match"] > 5000], key=lambda x: x[1], reverse=True)
-                    ids = [h[0] for h in top[:30]]
-                    c.execute('DELETE FROM hero_meta_cache')
-                    c.execute('INSERT INTO hero_meta_cache (id, data, updated_at) VALUES (1, ?, ?)', (json.dumps(ids), time.time()))
-                    conn.commit(); conn.close(); return ids
+                if "errors" not in data: return data.get("data", {}).get("player", {}).get("matches", [])
         except: pass
-    conn.close(); return list(HEROES.keys())
-
-def get_player_matches_from_stratz(acc_id, limit=5):
-    if not STRATZ_API_TOKEN: return []
-    url = "https://api.stratz.com/graphql"
-    headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-    q = "query GetPlayerMatches($steamId: Long!, $take: Int!) { player(steamAccountId: $steamId) { matches(take: $take) { id didRadiantWin durationSeconds players { heroId isRadiant kills deaths assists } } } }"
-    try:
-        r = requests.post(url, headers=headers, json={"query": q, "variables": {"steamId": int(acc_id), "take": limit}}, timeout=20, verify=False)
-        if r.status_code == 200:
-            data = r.json()
-            if "errors" not in data: return data.get("data", {}).get("player", {}).get("matches", [])
-    except: pass
     return []
-
-def get_player_matches_opendota(acc_id, limit=5):
-    try:
-        r = requests.get(f"https://api.opendota.com/api/players/{acc_id}/matches?limit={limit}", timeout=10)
-        if r.status_code == 200: return r.json()
-    except: pass
-    return None
-
-def get_player_matches_valve(acc_id, limit=5):
-    if not STEAM_API_KEY: return None
-    params = {"key": STEAM_API_KEY, "account_id": acc_id, "matches_requested": limit}
-    try:
-        r = requests.get("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/", params=params, timeout=15)
-        if r.status_code == 200:
-            m = r.json().get("result", {}).get("matches", [])
-            if m: return m
-    except: pass
-    return None
 
 def get_player_profile_from_steam(s_id):
     if not STEAM_API_KEY: return None
@@ -397,8 +283,7 @@ def enrich_pro_players_with_avatars(players):
         if r.status_code == 200:
             for sp in r.json().get("response", {}).get("players", []): avatars[sp['steamid']] = sp.get('avatarfull', '')
     except: pass
-    for p in players:
-        p['avatar'] = avatars.get(str(p['account_id'] + 76561197960265728), '') if p.get('account_id') else ''
+    for p in players: p['avatar'] = avatars.get(str(p['account_id'] + 76561197960265728), '') if p.get('account_id') else ''
     return players
 
 PRO_PLAYERS_DATA = [
@@ -444,12 +329,12 @@ PRO_PLAYERS_DATA = [
     {"name": "rue", "team": "Team Spirit", "role": 5, "account_id": 847565596, "liquipedia": "https://liquipedia.net/dota2/Rue", "dotabuff": "https://www.dotabuff.com/players/847565596"},
     {"name": "Watson", "team": "Team Yandex", "role": 1, "account_id": 171262902, "liquipedia": "https://liquipedia.net/dota2/Watson", "dotabuff": "https://www.dotabuff.com/players/171262902"},
     {"name": "CHIRA_JUNIOR", "team": "Team Yandex", "role": 2, "account_id": 312436974, "liquipedia": "https://liquipedia.net/dota2/CHIRA_JUNIOR", "dotabuff": "https://www.dotabuff.com/players/312436974"},
-    {"name": "ATF", "team": "Team Yandex", "role": 3, "account_id": 183719386, "liquipedia": "https://liquipedia.net/dota2/ATF", "dotabuff": "https://www.dotabuff.com/players/183719386"},
+        {"name": "ATF", "team": "Team Yandex", "role": 3, "account_id": 183719386, "liquipedia": "https://liquipedia.net/dota2/ATF", "dotabuff": "https://www.dotabuff.com/players/183719386"},
     {"name": "Saksa", "team": "Team Yandex", "role": 4, "account_id": 103735745, "liquipedia": "https://liquipedia.net/dota2/Saksa", "dotabuff": "https://www.dotabuff.com/players/103735745"},
     {"name": "Maladych", "team": "Team Yandex", "role": 5, "account_id": 93817671, "liquipedia": "https://liquipedia.net/dota2/Maladych", "dotabuff": "https://www.dotabuff.com/players/93817671"},
     {"name": "Darklord^", "team": "LEGION", "role": 1, "account_id": 879017980, "liquipedia": "https://liquipedia.net/dota2/Darklord", "dotabuff": "https://www.dotabuff.com/players/879017980"},
     {"name": "Stojkov", "team": "LEGION", "role": 2, "account_id": 262476000, "liquipedia": "https://liquipedia.net/dota2/Stojkov", "dotabuff": "https://www.dotabuff.com/players/262476000"},
-        {"name": "SaberLight", "team": "LEGION", "role": 3, "account_id": 126212866, "liquipedia": "https://liquipedia.net/dota2/SaberLight", "dotabuff": "https://www.dotabuff.com/players/126212866"},
+    {"name": "SaberLight", "team": "LEGION", "role": 3, "account_id": 126212866, "liquipedia": "https://liquipedia.net/dota2/SaberLight", "dotabuff": "https://www.dotabuff.com/players/126212866"},
     {"name": "Xsvampire", "team": "LEGION", "role": 4, "account_id": 326327879, "liquipedia": "https://liquipedia.net/dota2/Xsvampire", "dotabuff": "https://www.dotabuff.com/players/326327879"},
     {"name": "Kidaro", "team": "LEGION", "role": 5, "account_id": 104334048, "liquipedia": "https://liquipedia.net/dota2/Kidaro", "dotabuff": "https://www.dotabuff.com/players/104334048"}
 ]
@@ -522,24 +407,29 @@ def my_profile():
 @app.route('/', methods=['GET', 'POST'])
 def index():
     analysis, error, analyzed_match_id, players_data, items_data = None, None, None, [], {}
-            # ПРОВЕРКА ЛИМИТОВ
-    is_premium = False
+    chart_labels, chart_values, networth_labels, networth_values = [], [], [], []
+    today_seed = int(datetime.date.today().strftime("%Y%m%d"))
+    random.seed(today_seed)
+    hero_of_day_id = random.choice(get_top_heroes_for_hero_of_day())
+    local_hero_info = HEROES.get(hero_of_day_id, {})
+    hero_name = local_hero_info.get('localized_name', 'Unknown')
+    hero_of_day = {"id": hero_of_day_id, "name": hero_name, "icon": local_hero_info.get('icon', ''), "system_name": get_hero_system_name(hero_name)}
+    hero_of_day_stats = get_hero_info(hero_of_day_id)
+    auto_match_id = request.args.get('match_id')
     
-    # 1. Проверяем, залогинен ли пользователь
+    # ПРОВЕРКА ЛИМИТОВ
+    is_premium = False
     if 'steam_id' not in session:
-        # Лимит для анонимов по IP
         user_ip = request.remote_addr
         today = datetime.date.today().strftime("%Y-%m-%d")
-        
         conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
         cursor = conn.cursor()
-        # Ищем запись для этого IP за сегодня
         cursor.execute("SELECT count FROM user_requests WHERE steam_id = ? AND request_date = ?", (user_ip, today))
         req_row = cursor.fetchone()
         req_count = req_row[0] if req_row else 0
         
         if request.method == 'POST':
-            if req_count >= 3:
+            if req_count >= 1:
                 error = "Вы исчерпали бесплатный пробный анализ. Войдите через Steam, чтобы получить еще 5 бесплатных разборов!"
                 conn.close()
                 return render_template('index.html', analysis=None, error=error, analyzed_match_id=None, players=[], pro_players=enrich_pro_players_with_avatars(PRO_PLAYERS_DATA.copy()), donate_url="https://www.donationalerts.com/r/asod888", chart_labels=[], chart_values=[], networth_labels=[], networth_values=[], hero_of_day=None, hero_of_day_stats=None, is_logged_in=False, user_avatar=None, user_name=None, items_data={})
@@ -549,13 +439,11 @@ def index():
         conn.close()
         
     else:
-        # 2. Если залогинен — проверяем Премиум и лимит 5/день
         conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
         cursor = conn.cursor()
         cursor.execute("SELECT is_active FROM user_premium WHERE steam_id = ?", (session['steam_id'],))
         row = cursor.fetchone()
-        if row and row[0] == 1:
-            is_premium = True
+        if row and row[0] == 1: is_premium = True
             
         if request.method == 'POST' and not is_premium:
             today = datetime.date.today().strftime("%Y-%m-%d")
@@ -571,15 +459,7 @@ def index():
                 cursor.execute("INSERT INTO user_requests (steam_id, request_date, count) VALUES (?, ?, 1) ON CONFLICT(steam_id, request_date) DO UPDATE SET count = count + 1", (session['steam_id'], today))
                 conn.commit()
         conn.close()
-    chart_labels, chart_values, networth_labels, networth_values = [], [], [], []
-    today_seed = int(datetime.date.today().strftime("%Y%m%d"))
-    random.seed(today_seed)
-    hero_of_day_id = random.choice(get_top_heroes_for_hero_of_day())
-    local_hero_info = HEROES.get(hero_of_day_id, {})
-    hero_name = local_hero_info.get('localized_name', 'Unknown')
-    hero_of_day = {"id": hero_of_day_id, "name": hero_name, "icon": local_hero_info.get('icon', ''), "system_name": get_hero_system_name(hero_name)}
-    hero_of_day_stats = get_hero_info(hero_of_day_id)
-    auto_match_id = request.args.get('match_id')
+
     if request.method == 'POST' or auto_match_id:
         match_id = ''.join(filter(str.isdigit, request.form.get('match_id', ''))) if request.method == 'POST' else auto_match_id
         if not match_id: error = "Введите корректный ID матча."
@@ -596,6 +476,7 @@ def index():
                     chart_labels.append(h_name); chart_values.append(p.get('gold_per_min', 0))
                 for minute, lead in enumerate(match_data.get('radiant_networth_leads') or []):
                     networth_labels.append(f"{minute}:00"); networth_values.append(lead)
+                    
     is_logged_in = 'steam_id' in session
     user_avatar, user_name = None, None
     if is_logged_in:
@@ -636,14 +517,14 @@ def draft_helper():
             if counter_picks:
                 counters_str = ", ".join([f"{c['name']} ({c['win_rate']:.1f}%)" for c in counter_picks])
                 prompt = f"Враги: {', '.join(enemy_names)}. " + (f"Союзники: {', '.join(ally_names)}. " if ally_names else "") + f"Лучшие контр-пики по статистике: {counters_str}. Напиши краткий разбор драфта: кого лучше взять и почему. НЕ ПИШИ про предметы. Ответь обычным текстом."
-                ai_analysis = analyze_with_gigachat(prompt)
+                ai_analysis = analyze_with_gigachat(prompt, is_premium=True)
                 if 'steam_id' in session:
                     try:
                         conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
                         cursor = conn.cursor()
                         cursor.execute("INSERT INTO user_drafts (steam_id) VALUES (?)", (session['steam_id'],))
                         conn.commit(); conn.close()
-                    except Exception as e: print(f"Ошибка сохранения драфта: {e}")
+                    except Exception as e: pass
     return render_template('draft.html', heroes=all_heroes, counter_picks=counter_picks, error=error, ai_analysis=ai_analysis)
 
 @app.route('/heroes', methods=['GET', 'POST'])
@@ -665,75 +546,38 @@ def heroes_base():
 
 @app.route('/rating')
 def rating():
-    stats = []
-    
-    # 1. Пытаемся через STRATZ
-    if STRATZ_API_TOKEN:
-        url = "https://api.stratz.com/graphql"
-        headers = {"Authorization": f"Bearer {STRATZ_API_TOKEN}", "Content-Type": "application/json", "User-Agent": "STRATZ_API"}
-        q = "query GetHeroStats { heroStats { winWeek { heroId winCount matchCount } } }"
-        try:
-            r = requests.post(url, headers=headers, json={"query": q}, timeout=10, verify=False)
-            if r.status_code == 200:
-                data = r.json()
-                if "errors" not in data:
-                    raw_stats = data.get("data", {}).get("heroStats", {}).get("winWeek", [])
-                    # Преобразуем данные STRATZ в нужный формат
-                    hero_totals = {}
-                    for s in raw_stats:
-                        h_id = s.get("heroId")
-                        if h_id not in hero_totals: hero_totals[h_id] = {"win": 0, "match": 0}
-                        hero_totals[h_id]["win"] += s.get("winCount", 0)
-                        hero_totals[h_id]["match"] += s.get("matchCount", 0)
-                    
-                    for h_id, totals in hero_totals.items():
-                        if totals["match"] > 5000:
-                            stats.append({
-                                "id": h_id,
-                                "winrate": round((totals["win"] / totals["match"]) * 100, 2),
-                                "matches": totals["match"]
-                            })
-        except: pass
-
-    # 2. Если STRATZ упал или пусто — берем из OpenDota
-    if not stats:
-        try:
-            r = requests.get("https://api.opendota.com/api/heroStats", timeout=15)
-            if r.status_code == 200:
-                data = r.json()
-                for h in data:
-                    # Считаем винрейт за последнюю неделю (pub)
-                    wins = h.get("1_win", 0)
-                    picks = h.get("1_pick", 0)
-                    if picks > 5000:
-                        stats.append({
-                            "id": h.get("id"),
-                            "winrate": round((wins / picks) * 100, 2),
-                            "matches": picks
-                        })
-        except: pass
-
-    # 3. Сортируем и берем топ-10
-    top_10 = sorted(stats, key=lambda x: x['winrate'], reverse=True)[:10]
-    
-    # Дополняем данными из локального файла (имя, картинка)
     leaderboard = []
-    for h in top_10:
-        h_info = HEROES.get(str(h["id"]), {})
-        leaderboard.append({
-            "name": h_info.get('localized_name', 'Unknown'), 
-            "winrate": h["winrate"], 
-            "img": h_info.get('img', '').split('?')[0]
-        })
+    try:
+        r = requests.get("https://api.opendota.com/api/heroStats", timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            for h in data:
+                wins = h.get("1_win", 0)
+                picks = h.get("1_pick", 0)
+                if picks > 3000: 
+                    leaderboard.append({"id": h.get("id"), "winrate": round((wins / picks) * 100, 2)})
+    except: pass
 
-    # Просим ИИ написать анализ меты (если есть хотя бы 5 героев)
+    if not leaderboard:
+        sample_heroes = random.sample(list(HEROES.keys()), 10)
+        for h_id in sample_heroes:
+            leaderboard.append({"id": int(h_id), "winrate": round(random.uniform(50.0, 56.0), 2)})
+
+    top_10 = sorted(leaderboard, key=lambda x: x['winrate'], reverse=True)[:10]
+    final_leaderboard = []
+    for item in top_10:
+        h_id = item["id"]
+        h_info = HEROES.get(str(h_id), {})
+        img_url = h_info.get('img', '').split('?')[0]
+        if not img_url: img_url = h_info.get('icon', '')
+        final_leaderboard.append({"name": h_info.get('localized_name', 'Unknown'), "winrate": item["winrate"], "img": img_url})
+
     meta_analysis = None
-    if len(leaderboard) >= 5:
+    if len(final_leaderboard) >= 5:
         try:
-            meta_analysis = analyze_with_gigachat(f"Топ-5 героев: {', '.join([h['name'] for h in leaderboard[:5]])}. Краткий анализ меты (3-4 предложения).")
+            meta_analysis = analyze_with_gigachat(f"Топ-5 героев: {', '.join([h['name'] for h in final_leaderboard[:5]])}. Краткий анализ меты (3-4 предложения).")
         except: pass
-
-    return render_template('rating.html', leaderboard=leaderboard, meta_analysis=meta_analysis)
+    return render_template('rating.html', leaderboard=final_leaderboard, meta_analysis=meta_analysis)
 
 @app.route('/random')
 def random_hero():
@@ -779,7 +623,6 @@ def fantasy():
         if is_locked: return redirect(url_for('fantasy'))
         else: session.pop('saved_roster', None); return redirect(url_for('fantasy'))
         
-    # Проверяем, открыт ли турнир
     tournament_is_open = is_tournament_open(current_tournament)
     
     if request.method == 'POST' and not is_locked:
@@ -788,18 +631,13 @@ def fantasy():
         else:
             p1, p2, p3, p4, p5 = request.form.get('role_1'), request.form.get('role_2'), request.form.get('role_3'), request.form.get('role_4'), request.form.get('role_5')
             selected = [p1, p2, p3, p4, p5]
-            if not all(selected): 
-                error = "Вы должны выбрать по одному игроку на каждую позицию."
+            if not all(selected): error = "Вы должны выбрать по одному игроку на каждую позицию."
             else:
                 try:
                     cursor.execute('INSERT INTO fantasy_rosters (steam_id, player1, player2, player3, player4, player5, tournament) VALUES (?, ?, ?, ?, ?, ?, ?)', (steam_id_64, p1, p2, p3, p4, p5, current_tournament)); conn.commit()
-                    session['saved_roster'] = selected
-                    saved_roster_names = selected
-                    is_locked = True
-                    success = "Твой состав успешно сохранен!"
-                except Exception as e: 
-                    error = f"Ошибка: {e}"
-            
+                    session['saved_roster'] = selected; saved_roster_names = selected; is_locked = True; success = "Твой состав успешно сохранен!"
+                except Exception as e: error = f"Ошибка: {e}"
+
     player_stats = []
     if saved_roster_names:
         for i, name in enumerate(saved_roster_names):
@@ -809,35 +647,23 @@ def fantasy():
             acc_id = player_info.get('account_id', 0)
             points = 0.0
             has_data = False
-
-            # 1. Пытаемся спросить OpenDota (она сейчас работает)
             if acc_id:
                 try:
                     res = requests.get(f"https://api.opendota.com/api/players/{acc_id}/recentMatches", timeout=8)
                     if res.status_code == 200 and res.json():
                         m = res.json()[0]
-                        if role <= 3:
-                            points = (m.get('gold_per_min', 0) / 10) + (m.get('kills', 0) * 2) - (m.get('deaths', 0) * 1.5) + (m.get('assists', 0) * 1.5)
-                        else:
-                            points = (m.get('assists', 0) * 2.5) - (m.get('deaths', 0) * 0.5)
+                        if role <= 3: points = (m.get('gold_per_min', 0) / 10) + (m.get('kills', 0) * 2) - (m.get('deaths', 0) * 1.5) + (m.get('assists', 0) * 1.5)
+                        else: points = (m.get('assists', 0) * 2.5) - (m.get('deaths', 0) * 0.5)
                         points = round(points, 1)
                         has_data = True
-                except:
-                    pass
-
-            # 2. Если OpenDota не ответила, делаем фолбэк
+                except: pass
             if not has_data:
-                base_gpm = {
-                    "Pure": 680, "bzm": 650, "33": 550, "Ari": 450, "Whitemon": 350, "Nightfall": 670, "lorenof": 640, "DM": 560, "OmaR": 440, "GH": 340, "Kiritych": 690, "Save-": 660, "MieRo": 570, "swedenstrong": 460, "Kataomi": 330, "Yuma": 680, "RCY": 630, "Fayde": 540, "Bignum": 450, "Speeed": 350, "Natsumi": 650, "Topson": 620, "SSS": 550, "Onejey": 430, "skem": 320, "Satanic": 700, "No[o]ne-": 670, "Noticed": 580, "9Class": 480, "Dukalis": 340, "m1CKe": 690, "Malr1ne": 650, "Wisper": 560, "Boxi": 470, "tOfu": 330, "Yatoro": 710, "Larl": 680, "Batyuk": 590, "not me": 490, "rue": 350, "Watson": 660, "CHIRA_JUNIOR": 630, "ATF": 570, "Saksa": 480, "Maladych": 340, "Darklord^": 640, "Stojkov": 600, "SaberLight": 550, "Xsvampire": 450, "Kidaro": 330
-                }
+                base_gpm = {"Pure": 680, "bzm": 650, "33": 550, "Ari": 450, "Whitemon": 350, "Nightfall": 670, "lorenof": 640, "DM": 560, "OmaR": 440, "GH": 340, "Kiritych": 690, "Save-": 660, "MieRo": 570, "swedenstrong": 460, "Kataomi": 330, "Yuma": 680, "RCY": 630, "Fayde": 540, "Bignum": 450, "Speeed": 350, "Natsumi": 650, "Topson": 620, "SSS": 550, "Onejey": 430, "skem": 320, "Satanic": 700, "No[o]ne-": 670, "Noticed": 580, "9Class": 480, "Dukalis": 340, "m1CKe": 690, "Malr1ne": 650, "Wisper": 560, "Boxi": 470, "tOfu": 330, "Yatoro": 710, "Larl": 680, "Batyuk": 590, "not me": 490, "rue": 350, "Watson": 660, "CHIRA_JUNIOR": 630, "ATF": 570, "Saksa": 480, "Maladych": 340, "Darklord^": 640, "Stojkov": 600, "SaberLight": 550, "Xsvampire": 450, "Kidaro": 330}
                 base = base_gpm.get(name, 500)
                 fake_gpm = base + random.randint(-50, 50)
-                if role <= 3:
-                    points = (fake_gpm / 10) + random.randint(3, 9) * 2 - random.randint(1, 5) * 1.5
-                else:
-                    points = random.randint(15, 25) * 2.5 - random.randint(1, 4) * 0.5
+                if role <= 3: points = (fake_gpm / 10) + random.randint(3, 9) * 2 - random.randint(1, 5) * 1.5
+                else: points = random.randint(15, 25) * 2.5 - random.randint(1, 4) * 0.5
                 points = round(points, 1)
-
             player_stats.append({"name": name, "team": player_info.get('team', 'Unknown'), "role": role, "points": points})
 
     total_points = sum(p['points'] for p in player_stats)
@@ -846,9 +672,11 @@ def fantasy():
         if total_points >= 200 and 'points_200' not in existing: cursor.execute("INSERT INTO user_achievements (steam_id, achievement_id) VALUES (?, ?)", (steam_id_64, 'points_200')); conn.commit()
         if total_points >= 700 and 'points_700' not in existing: cursor.execute("INSERT INTO user_achievements (steam_id, achievement_id) VALUES (?, ?)", (steam_id_64, 'points_700')); conn.commit()
     conn.close()
-        if not tournament_is_open and not saved_roster_names:
-            error = "Прием составов на этот турнир закрыт. Дождитесь следующего!"
-        return render_template('fantasy.html', available_players=PRO_PLAYERS_DATA, current_tournament=current_tournament, error=error, success=success, saved_roster=saved_roster_names, player_stats=player_stats, is_locked=is_locked)
+    
+    if not tournament_is_open and not saved_roster_names:
+        error = "Прием составов на этот турнир закрыт. Дождитесь следующего!"
+        
+    return render_template('fantasy.html', available_players=PRO_PLAYERS_DATA, current_tournament=current_tournament, error=error, success=success, saved_roster=saved_roster_names, player_stats=player_stats, is_locked=is_locked)
 
 @app.route('/fantasy/leaderboard')
 def fantasy_leaderboard():
@@ -869,33 +697,6 @@ def fantasy_leaderboard():
 @app.route('/coach', methods=['GET', 'POST'])
 def coach():
     ai_feedback = None; error = None; searched_id = None
-        # ПРОВЕРКА ЛИМИТОВ
-    is_premium = False
-    if 'steam_id' in session:
-        conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
-        cursor = conn.cursor()
-        cursor.execute("SELECT is_active FROM user_premium WHERE steam_id = ?", (session['steam_id'],))
-        row = cursor.fetchone()
-        if row and row[0] == 1:
-            is_premium = True
-            
-        # Если это POST запрос (нажал "Анализировать") и человек не премиум
-        if request.method == 'POST' and not is_premium:
-            today = datetime.date.today().strftime("%Y-%m-%d")
-            cursor.execute("SELECT count FROM user_requests WHERE steam_id = ? AND request_date = ?", (session['steam_id'], today))
-            req_row = cursor.fetchone()
-            req_count = req_row[0] if req_row else 0
-            
-            if req_count >= 5:
-                error = "Дневной лимит анализов (5) исчерпан. Купите Премиум для безлимита!"
-                conn.close()
-                # Возвращаем страницу с ошибкой, не выполняя анализ
-                return render_template('index.html', analysis=None, error=error, analyzed_match_id=None, players=[], pro_players=enrich_pro_players_with_avatars(PRO_PLAYERS_DATA.copy()), donate_url="https://www.donationalerts.com/r/asod888", chart_labels=[], chart_values=[], networth_labels=[], networth_values=[], hero_of_day=None, hero_of_day_stats=None, is_logged_in=True, user_avatar=None, user_name=None, items_data={})
-            else:
-                # Записываем новый запрос
-                cursor.execute("INSERT INTO user_requests (steam_id, request_date, count) VALUES (?, ?, 1) ON CONFLICT(steam_id, request_date) DO UPDATE SET count = count + 1", (session['steam_id'], today))
-                conn.commit()
-        conn.close()
     if request.method == 'POST':
         steam_id_input = request.form.get('steam_id', '').strip() or session.get('steam_id')
         if not steam_id_input: error = "Введите Steam ID."
@@ -950,14 +751,12 @@ def leaderboard_players():
         conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
         cursor = conn.cursor()
         
-        # Проверяем кэш (15 минут)
         cursor.execute('SELECT data, updated_at FROM leaderboard_cache WHERE id = 1')
         row = cursor.fetchone()
         current_time = time.time()
         
         if row and (current_time - row[1] < 900):
             cached_data = json.loads(row[0])
-            # Проверяем, что в кэше нет "UNKNOWN", иначе обновляем
             if cached_data and not any(p['hero'] == 'Unknown' for p in cached_data):
                 conn.close()
                 return render_template('leaderboard_players.html', top_players=cached_data)
@@ -968,7 +767,6 @@ def leaderboard_players():
             acc_id = player.get('account_id')
             if not acc_id: continue
             try:
-                # 1. Берем GPM
                 r_matches = requests.get(f"https://api.opendota.com/api/players/{acc_id}/matches?limit=20", timeout=5)
                 avg_gpm = 0
                 matches_data = []
@@ -977,7 +775,6 @@ def leaderboard_players():
                     valid_gpms = [m.get('gold_per_min', 0) for m in matches_data if m.get('gold_per_min', 0) > 0]
                     avg_gpm = int(sum(valid_gpms) / len(valid_gpms)) if valid_gpms else 0
                 
-                # 2. Ищем сигнатурного героя
                 best_hero_id = 0
                 r_heroes = requests.get(f"https://api.opendota.com/api/players/{acc_id}/heroes", timeout=5)
                 if r_heroes.status_code == 200 and r_heroes.json():
@@ -987,22 +784,17 @@ def leaderboard_players():
                         best_hero = max(valid_heroes, key=lambda x: x.get('games', 0))
                         best_hero_id = best_hero.get('hero_id', 0)
                 
-                # 3. Если не нашли героя, берем из последнего матча
                 if best_hero_id == 0 and matches_data:
                     best_hero_id = matches_data[0].get('hero_id', 0)
                 
-                # 4. ЖЕЛЕЗОБЕТОННАЯ ЗАЩИТА: если ID все еще 0, берем случайного героя из базы!
                 if best_hero_id == 0 or str(best_hero_id) not in HEROES:
                     best_hero_id = random.choice(list(HEROES.keys()))
 
                 hero_info = HEROES.get(str(best_hero_id), {})
                 
                 img_url = hero_info.get('img', '')
-                if img_url:
-                    img_url = img_url.split('?')[0]
-                else:
-                    # Если нет большой картинки, берем иконку
-                    img_url = hero_info.get('icon', '')
+                if img_url: img_url = img_url.split('?')[0]
+                else: img_url = hero_info.get('icon', '')
 
                 top_players.append({
                     "name": player['name'],
@@ -1015,7 +807,6 @@ def leaderboard_players():
             except Exception as e:
                 continue
                 
-        # Если вообще ничего не собрали, делаем фейковый топ
         if not top_players:
             sample_players = random.sample(PRO_PLAYERS_DATA, 10)
             for player in sample_players:
@@ -1055,8 +846,7 @@ def guess():
 
         if action == 'start':
             pool = get_top_heroes_for_hero_of_day()
-            if not pool:
-                pool = list(HEROES.keys())
+            if not pool: pool = list(HEROES.keys())
 
             hero_found = False
             attempts = 0
@@ -1103,16 +893,14 @@ def guess():
                 session.modified = True
 
             pool = get_top_heroes_for_hero_of_day()
-            if not pool:
-                pool = list(HEROES.keys())
+            if not pool: pool = list(HEROES.keys())
             
             hero_found = False
             attempts = 0
             while not hero_found and attempts < 10:
                 attempts += 1
                 h_id = random.choice(pool)
-                if session.get('guess_hero') and int(session['guess_hero']['id']) == int(h_id):
-                    continue
+                if session.get('guess_hero') and int(session['guess_hero']['id']) == int(h_id): continue
                 hero_info = get_hero_info(h_id)
                 if hero_info and hero_info.get('calculated_winrate', 0) > 0:
                     local_name = HEROES.get(str(h_id), {}).get('localized_name', 'Unknown')
@@ -1144,8 +932,7 @@ def premium():
         cursor = conn.cursor()
         cursor.execute("SELECT is_active FROM user_premium WHERE steam_id = ?", (session['steam_id'],))
         row = cursor.fetchone()
-        if row and row[0] == 1:
-            is_premium = True
+        if row and row[0] == 1: is_premium = True
         conn.close()
     return render_template('premium.html', is_premium=is_premium)
 
@@ -1161,8 +948,7 @@ def premium_activate():
 
 @app.route('/wheel', methods=['GET', 'POST'])
 def wheel():
-    if 'steam_id' not in session:
-        return redirect(url_for('login_steam'))
+    if 'steam_id' not in session: return redirect(url_for('login_steam'))
     
     conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
     cursor = conn.cursor()
@@ -1170,33 +956,30 @@ def wheel():
     row = cursor.fetchone()
     is_premium = row and row[0] == 1
     
-    # --- НАЧАЛО ВСТАВКИ (Проверка 24 часов) ---
     result = None
-    win_index = 0
+    win_index = 0 
+    
     can_spin = True
-
-    if is_premium:
+    if request.method == 'POST' and is_premium:
         cursor.execute("SELECT last_spin FROM user_spins WHERE steam_id = ?", (session['steam_id'],))
         last_spin_row = cursor.fetchone()
         if last_spin_row:
-            # Парсим время из базы (SQLite хранит его как строку)
             last_spin_time = datetime.datetime.strptime(last_spin_row[0], "%Y-%m-%d %H:%M:%S")
-            # Если с последней прокрутки прошло меньше 24 часов (86400 секунд)
             if (datetime.datetime.now() - last_spin_time).total_seconds() < 86400:
                 can_spin = False
                 result = "Вы уже крутили колесо сегодня. Следующая попытка будет доступна через 24 часа!"
-    # --- КОНЕЦ ВСТАВКИ ---
+                win_index = -1
 
-    if request.method == 'POST' and is_premium and can_spin: # <-- Добавляем 'and can_spin' сюда
+    if request.method == 'POST' and is_premium and can_spin:
         rand = random.uniform(0, 100)
         
         if rand < 0.00001:
             result = "Аркана на любого героя! (Поздравляем, ты выиграл джекпот! Свяжись с админом)"
             win_index = 4
-        elif rand < 0.07:
+        elif rand < 0.06:
             result = "Inscribed Lamb для Slark! (Напиши админу для получения)"
             win_index = 3
-        elif rand < 0.55:
+        elif rand < 0.56:
             result = "Скин в Доте до 200 рублей!"
             win_index = 2
         elif rand < 20.56:
@@ -1223,17 +1006,14 @@ def admin_login():
         if password == ADMIN_PASSWORD:
             session['is_admin'] = True
             return redirect(url_for('admin_panel'))
-        else:
-            error = "Неверный пароль!"
+        else: error = "Неверный пароль!"
     return render_template('admin_login.html', error=error)
 
 @app.route('/admin/panel', methods=['GET', 'POST'])
 def admin_panel():
-    if not session.get('is_admin'):
-        return redirect(url_for('admin_login'))
+    if not session.get('is_admin'): return redirect(url_for('admin_login'))
     
-    success = None
-    error = None
+    success = None; error = None
     conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
     cursor = conn.cursor()
     
@@ -1246,33 +1026,29 @@ def admin_panel():
                 cursor.execute("INSERT OR REPLACE INTO user_premium (steam_id, is_active) VALUES (?, 1)", (steam_id,))
                 conn.commit()
                 success = f"Премиум успешно выдан для ID: {steam_id}"
-            except Exception as e:
-                error = f"Ошибка: {e}"
-                 elif action == 'close_tournament' and steam_id:
+            except Exception as e: error = f"Ошибка: {e}"
+        elif action == 'close_tournament' and steam_id:
             try:
                 cursor.execute("INSERT OR REPLACE INTO fantasy_tournaments (tournament_name, is_open) VALUES (?, 0)", (steam_id,))
                 conn.commit()
                 success = f"Турнир '{steam_id}' закрыт для приема составов."
             except Exception as e: error = f"Ошибка: {e}"
-            
         elif action == 'open_tournament' and steam_id:
             try:
                 cursor.execute("INSERT OR REPLACE INTO fantasy_tournaments (tournament_name, is_open) VALUES (?, 1)", (steam_id,))
                 conn.commit()
                 success = f"Турнир '{steam_id}' открыт!"
-            except Exception as e: error = f"Ошибка: {e}"       
+            except Exception as e: error = f"Ошибка: {e}"
         elif action == 'remove' and steam_id:
             try:
                 cursor.execute("DELETE FROM user_premium WHERE steam_id = ?", (steam_id,))
                 conn.commit()
                 success = f"Премиум успешно снят с ID: {steam_id}"
-            except Exception as e:
-                error = f"Ошибка: {e}"
+            except Exception as e: error = f"Ошибка: {e}"
     
     cursor.execute("SELECT steam_id, activated_at FROM user_premium WHERE is_active = 1")
     premium_users = cursor.fetchall()
     conn.close()
-    
     return render_template('admin_panel.html', success=success, error=error, premium_users=premium_users)
 
 @app.route('/admin/logout')
@@ -1281,12 +1057,10 @@ def admin_logout():
     return redirect(url_for('index'))
 
 @app.route('/sitemap.xml')
-def sitemap():
-    return send_from_directory(app.static_folder, 'sitemap.xml')
+def sitemap(): return send_from_directory(app.static_folder, 'sitemap.xml')
 
 @app.route('/robots.txt')
-def robots():
-    return send_from_directory(app.static_folder, 'robots.txt')
+def robots(): return send_from_directory(app.static_folder, 'robots.txt')
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -675,7 +675,8 @@ def fantasy():
     
     if not tournament_is_open and not saved_roster_names:
         error = "Прием составов на этот турнир закрыт. Дождитесь следующего!"
-        
+        # Временная проверка для отладки (потом уберешь)
+    error = f"DEBUG: Турнир закрыт? {not tournament_is_open} | Название: {current_tournament}"    
     return render_template('fantasy.html', available_players=PRO_PLAYERS_DATA, current_tournament=current_tournament, error=error, success=success, saved_roster=saved_roster_names, player_stats=player_stats, is_locked=is_locked)
 
 @app.route('/fantasy/leaderboard')

@@ -1,25 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://dota-analyzer.onrender.com/</loc>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://dota-analyzer.onrender.com/draft</loc>
-  </url>
-  <url>
-    <loc>https://dota-analyzer.onrender.com/heroes</loc>
-  </url>
-  <url>
-    <loc>https://dota-analyzer.onrender.com/rating</loc>
-  </url>
-  <url>
-    <loc>https://dota-analyzer.onrender.com/tournaments</loc>
-  </url>
-  <url>
-    <loc>https://dota-analyzer.onrender.com/guess</loc>
-  </url>
-  <url>
-    <loc>https://dota-analyzer.onrender.com/leaderboard_players</loc>
-  </url>
+  <url><loc>https://dotaanalyzer.space/</loc><priority>1.0</priority></url>
+  <url><loc>https://dotaanalyzer.space/draft</loc></url>
+  <url><loc>https://dotaanalyzer.space/heroes</loc></url>
+  <url><loc>https://dotaanalyzer.space/rating</loc></url>
+  <url><loc>https://dotaanalyzer.space/tournaments</loc></url>
+  <url><loc>https://dotaanalyzer.space/guess</loc></url>
+  <url><loc>https://dotaanalyzer.space/leaderboard_players</loc></url>
 </urlset>

@@ -242,9 +242,7 @@ def get_hero_info(hero_id):
     # ФОЛБЭК: Если API упало, показываем базовые данные из локального файла
     local = HEROES.get(str(hero_id), {})
     return {"roles": local.get("roles", ["Неизвестно"]), "calculated_winrate": 50.0, "icon": local.get("icon", "")}
-    except: pass
-    return None
-
+   
 def get_top_heroes_for_hero_of_day():
     conn = sqlite3.connect(os.path.join(base_dir, 'fantasy.db'))
     c = conn.cursor()

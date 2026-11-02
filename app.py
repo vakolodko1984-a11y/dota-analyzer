@@ -198,14 +198,17 @@ def get_hero_matchups(hero_id):
                                 adapted.append({"hero_id": vs["heroId2"], "win_rate": (vs["winCount"] / vs["matchCount"]) * 100})
                     if adapted: return adapted
         except: pass
+
     try:
         r = requests.get(f"https://api.opendota.com/api/heroes/{hero_id}/matchups", timeout=10)
         if r.status_code == 200:
             data = r.json()
             adapted = [{"hero_id": item["hero_id"], "win_rate": (item["wins"] / item["games_played"]) * 100} for item in data if item.get("games_played", 0) > 10]
-            return adapted
+            if adapted: return adapted
     except: pass
-    return None
+    
+    # ФОЛБЭК: если API упало, возвращаем пустой список, чтобы страница не падала
+    return []
 
 def get_hero_info(hero_id):
     if STRATZ_API_TOKEN:
@@ -223,8 +226,9 @@ def get_hero_info(hero_id):
                         if s.get("heroId") == int(hero_id) and s.get("matchCount", 0) > 0:
                             return {"roles": local.get("roles", ["Неизвестно"]), "calculated_winrate": round((s["winCount"] / s["matchCount"]) * 100, 2), "icon": local.get("icon", "")}
         except: pass
+        
     try:
-        r = requests.get(f"https://api.opendota.com/api/heroStats", timeout=15)
+        r = requests.get(f"https://api.opendota.com/api/heroStats", timeout=10)
         if r.status_code == 200:
             for hero_data in r.json():
                 if hero_data.get("id") == int(hero_id):
@@ -233,6 +237,11 @@ def get_hero_info(hero_id):
                     picks = hero_data.get("1_pick", 0)
                     winrate = (wins / picks * 100) if picks > 0 else 50.0
                     return {"roles": local.get("roles", ["Неизвестно"]), "calculated_winrate": round(winrate, 2), "icon": local.get("icon", "")}
+    except: pass
+    
+    # ФОЛБЭК: Если API упало, показываем базовые данные из локального файла
+    local = HEROES.get(str(hero_id), {})
+    return {"roles": local.get("roles", ["Неизвестно"]), "calculated_winrate": 50.0, "icon": local.get("icon", "")}
     except: pass
     return None
 

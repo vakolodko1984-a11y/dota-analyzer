@@ -133,19 +133,7 @@ def get_match_from_stratz(m_id):
                         return adapted, None
         except: pass
 
-    try:
-        r = requests.get(f"https://api.opendota.com/api/matches/{m_id}", timeout=15)
-        if r.status_code == 200:
-            data = r.json()
-            match = {"radiant_win": data.get("radiant_win", False), "duration": data.get("duration", 0), "radiant_networth_leads": data.get("radiant_gold_adv") or [], "players": []}
-            for p in data.get("players", []):
-                match["players"].append({
-                    "isRadiant": p.get("isRadiant", True), "hero_id": p.get("hero_id", 0),
-                    "kills": p.get("kills", 0), "deaths": p.get("deaths", 0), "assists": p.get("assists", 0),
-                    "gold_per_min": p.get("gold_per_min", 0), "xp_per_min": p.get("xp_per_min", 0),
-                    "hero_damage": p.get("hero_damage", 0), "tower_damage": p.get("tower_damage", 0), "hero_healing": p.get("hero_healing", 0)
-                })
-            return match, None
+    return None, "Не удалось получить данные о матче. Возможно, сервера Dota 2 перегружены. Попробуйте позже."
     except Exception as e:
         pass
 
